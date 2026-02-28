@@ -1,4 +1,4 @@
-package com.starfocus.app.app
+package com.starfocus.app
 
 import android.os.Build
 import android.os.Bundle

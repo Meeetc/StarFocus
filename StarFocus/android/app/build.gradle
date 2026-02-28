@@ -88,7 +88,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.starfocus"
+    namespace "com.starfocus.app"
     defaultConfig {
         applicationId "com.starfocus.app"
         minSdkVersion rootProject.ext.minSdkVersion

@@ -1,4 +1,4 @@
-package com.starfocus.app.app.modules
+package com.starfocus.app.modules
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule

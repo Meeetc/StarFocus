@@ -1,4 +1,4 @@
-package com.starfocus.app.app.services
+package com.starfocus.app.services
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo

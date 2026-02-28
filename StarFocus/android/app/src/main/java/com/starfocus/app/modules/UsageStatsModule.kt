@@ -1,4 +1,4 @@
-package com.starfocus.app.app.modules
+package com.starfocus.app.modules
 
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
