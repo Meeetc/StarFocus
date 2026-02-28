@@ -3,9 +3,6 @@
     "name": "StarFocus",
     "slug": "StarFocus",
     "version": "1.0.0",
-    "android": {
-      "package": "com.starfocus.app"
-    },
     "extra": {
       "eas": {
         "projectId": "9cc88c47-1458-4d88-af63-39a78ce9bca4"
