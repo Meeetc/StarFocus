@@ -28,8 +28,8 @@ export async function saveTask(task) {
         const tasks = await getTasks();
         const newTask = {
             ...task,
-            id: `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            source: 'manual',
+            id: task.id || `manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            source: task.source || 'manual',
             createdAt: new Date().toISOString(),
         };
         tasks.push(newTask);

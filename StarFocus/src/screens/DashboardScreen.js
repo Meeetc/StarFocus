@@ -17,7 +17,9 @@ import TaskCard from '../components/TaskCard';
 import WorkloadGauge from '../components/WorkloadGauge';
 import { rankTasks } from '../services/priority';
 import { calculateWorkloadScore } from '../services/workload';
-import { getTasks, deleteTask, updateTaskCompletion } from '../services/taskStorage';
+import { getTasks, deleteTask, updateTaskCompletion, saveTask } from '../services/taskStorage';
+import { fullSync } from '../services/classroom';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const FILTER_TABS = ['All', 'Classroom', 'Manual', '🔴 Critical'];
 
@@ -26,6 +28,7 @@ export default function DashboardScreen({ navigation }) {
     const [loading, setLoading] = useState(true);
     const [activeFilter, setActiveFilter] = useState('All');
     const [refreshing, setRefreshing] = useState(false);
+    const [syncing, setSyncing] = useState(false);
 
     const loadTasks = async () => {
         try {
@@ -38,16 +41,48 @@ export default function DashboardScreen({ navigation }) {
         }
     };
 
+    const syncClassroom = async () => {
+        try {
+            setSyncing(true);
+            const tokens = await GoogleSignin.getTokens();
+            if (tokens.accessToken) {
+                const classroomTasks = await fullSync(tokens.accessToken);
+                // Get existing tasks to avoid duplicates
+                const existing = await getTasks();
+                const existingIds = new Set(existing.map(t => t.id));
+
+                let addedCount = 0;
+                for (const ct of classroomTasks) {
+                    if (!existingIds.has(ct.id)) {
+                        await saveTask({
+                            ...ct,
+                            id: ct.id, // Keep classroom ID for dedup
+                        });
+                        addedCount++;
+                    }
+                }
+                if (addedCount > 0) {
+                    await loadTasks(); // Refresh the list
+                }
+            }
+        } catch (error) {
+            console.error('Classroom sync failed:', error);
+        } finally {
+            setSyncing(false);
+        }
+    };
+
     // Reload tasks every time this screen comes into focus
     useFocusEffect(
         useCallback(() => {
-            loadTasks();
+            loadTasks().then(() => syncClassroom());
         }, [])
     );
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await loadTasks();
+        await syncClassroom();
         setRefreshing(false);
     }, []);
 

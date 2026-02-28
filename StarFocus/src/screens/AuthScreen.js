@@ -30,6 +30,11 @@ export default function AuthScreen({ onSignIn }) {
             webClientId: CONFIG.GOOGLE_WEB_CLIENT_ID,
             offlineAccess: true,
             forceCodeForRefreshToken: true,
+            scopes: [
+                'https://www.googleapis.com/auth/classroom.courses.readonly',
+                'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+                'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+            ],
         });
     }, []);
 
