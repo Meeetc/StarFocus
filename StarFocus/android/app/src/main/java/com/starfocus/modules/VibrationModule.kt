@@ -12,6 +12,35 @@ class VibrationModule(private val reactContext: ReactApplicationContext) :
 
     override fun getName(): String = "VibrationModule"
 
+    companion object {
+        fun triggerWarning(context: Context) {
+            try {
+                val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+                    vibratorManager?.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                }
+                
+                if (vibrator?.hasVibrator() != true) return
+
+                val pattern = longArrayOf(0, 100, 50, 200, 50, 400, 100, 600)
+                val amplitudes = intArrayOf(0, 80, 0, 120, 0, 180, 0, 255)
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val effect = VibrationEffect.createWaveform(pattern, amplitudes, -1)
+                    vibrator.vibrate(effect)
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(pattern, -1)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
     private fun getVibrator(): Vibrator? {
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {

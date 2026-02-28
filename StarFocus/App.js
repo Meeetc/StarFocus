@@ -2,7 +2,7 @@
 import 'react-native-gesture-handler';
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, ActivityIndicator, View } from 'react-native';
@@ -10,6 +10,7 @@ import { supabase } from './src/lib/supabase';
 
 import AppNavigator from './src/navigation/AppNavigator';
 import AuthScreen from './src/screens/AuthScreen';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { Colors } from './src/theme';
 
 export default function App() {
@@ -17,41 +18,34 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check initial session with a timeout fallback
     let mounted = true;
 
-    const checkSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (mounted) {
-          setSession(session);
-          setLoading(false);
-        }
-      } catch (error) {
-        console.warn('Session check failed:', error);
-        if (mounted) setLoading(false);
-      }
-    };
-
-    checkSession();
-
-    // Safety timeout in case Supabase hangs
-    const timer = setTimeout(() => {
-      if (mounted && loading) setLoading(false);
-    }, 3000);
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (mounted) {
+        if (error) console.error("Initial session fetch error:", error);
         setSession(session);
-        setLoading(false); // Ensure loading is false on any auth event
+        setLoading(false);
       }
     });
 
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (mounted) {
+        setSession(session);
+        setLoading(false);
+      }
+    });
+
+    const timeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn('Session check timeout hit, forcing load');
+        setLoading(false);
+      }
+    }, 3000);
+
     return () => {
       mounted = false;
-      clearTimeout(timer);
-      subscription?.unsubscribe();
+      clearTimeout(timeout);
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -64,25 +58,25 @@ export default function App() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Colors.accent.blue} />
-      </View>
+      <SafeAreaProvider>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={Colors.accent.blue} />
+        </View>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <SafeAreaProvider>
+    <SafeAreaProvider>
+      <GestureHandlerRootView style={styles.container}>
+        <NavigationContainer theme={DarkTheme}>
+          <ErrorBoundary>
+            {session && session.user ? <AppNavigator /> : <AuthScreen />}
+          </ErrorBoundary>
+        </NavigationContainer>
         <StatusBar style="light" />
-        {session ? (
-          <NavigationContainer>
-            <AppNavigator />
-          </NavigationContainer>
-        ) : (
-          <AuthScreen />
-        )}
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+      </GestureHandlerRootView>
+    </SafeAreaProvider>
   );
 }
 
@@ -96,7 +90,7 @@ async function ensureUserProfile(user) {
       avatar_url: user.user_metadata?.avatar_url || null,
     }, {
       onConflict: 'auth_id',
-      ignoreDuplicates: true, // Don't overwrite if already exists
+      ignoreDuplicates: true,
     });
     if (error) console.warn('Profile upsert warning:', error.message);
   } catch (e) {
@@ -105,12 +99,13 @@ async function ensureUserProfile(user) {
 }
 
 const styles = StyleSheet.create({
-  root: {
+  container: {
     flex: 1,
+    backgroundColor: Colors.bg.primary,
   },
-  loading: {
+  loadingContainer: {
     flex: 1,
-    backgroundColor: '#0A0E1A',
+    backgroundColor: Colors.bg.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },

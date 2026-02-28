@@ -1,6 +1,6 @@
 // ProgressScreen — Strava-style progress visualization
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart, BarChart, ContributionGraph } from 'react-native-chart-kit';
@@ -65,10 +65,28 @@ const chartConfig = {
 };
 
 export default function ProgressScreen() {
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        // Simulate a network fetch for the demo data
+        const timeout = setTimeout(() => setLoading(false), 600);
+        return () => clearTimeout(timeout);
+    }, []);
+
     // Summary stats
     const totalMinutesWeek = DAILY_MINUTES.datasets[0].data.reduce((a, b) => a + b, 0);
     const avgScore = Math.round(WEEKLY_SCORES.datasets[0].data.reduce((a, b) => a + b, 0) / 7);
     const bestDay = Math.max(...WEEKLY_SCORES.datasets[0].data);
+
+    if (loading) {
+        return (
+            <SafeAreaView style={styles.safeArea}>
+                <View style={[styles.container, styles.loaderContainer]}>
+                    <ActivityIndicator size="large" color={Colors.accent.blue} />
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -158,6 +176,7 @@ const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: Colors.bg.primary },
     container: { flex: 1 },
     content: { padding: Spacing.md },
+    loaderContainer: { alignItems: 'center', justifyContent: 'center' },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     title: { ...Typography.h1, color: Colors.text.primary },
     subtitle: { ...Typography.caption, color: Colors.text.muted, marginBottom: Spacing.lg },

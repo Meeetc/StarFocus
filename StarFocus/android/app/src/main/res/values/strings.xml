@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">StarFocus</string>
+    <string name="accessibility_service_description">StarFocus needs Accessibility access to detect when you open distracting apps during a Focus Sprint.</string>
 </resources>

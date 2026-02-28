@@ -6,6 +6,9 @@ import {
     StyleSheet,
     TouchableOpacity,
     Alert,
+    DeviceEventEmitter,
+    ScrollView,
+    RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +18,7 @@ import GlassCard from '../components/GlassCard';
 import { calculateFocusScore } from '../services/focusScore';
 import { vibrateDeterrent, vibrateSuccess } from '../native/Vibration';
 import { showOverlay } from '../native/Overlay';
+import { UsageStats } from '../native/UsageStats';
 import { supabase } from '../lib/supabase';
 
 const DURATION_OPTIONS = [15, 25, 45, 60];
@@ -35,6 +39,19 @@ export default function FocusSprintScreen({ route, navigation }) {
     const impulseOpensRef = useRef(0);
     const [appSwitchesDisplay, setAppSwitchesDisplay] = useState(0);
     const [impulseOpensDisplay, setImpulseOpensDisplay] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
+
+    // Native event listener for background distractions
+    useEffect(() => {
+        const subscription = DeviceEventEmitter.addListener('onAppSwitchDetected', () => {
+            if (isRunning) {
+                // Background service already triggered the warning vibration,
+                // we just need to update our JS state counts.
+                handleAppSwitch();
+            }
+        });
+        return () => subscription.remove();
+    }, [isRunning]);
 
     // Timer logic
     useEffect(() => {
@@ -64,6 +81,9 @@ export default function FocusSprintScreen({ route, navigation }) {
         setSessionComplete(false);
         setFocusResult(null);
         startTimeRef.current = new Date().toISOString();
+
+        // Notify native service that a sprint has started
+        UsageStats.setSprintActive(true);
     };
 
     const handlePause = () => {
@@ -81,6 +101,7 @@ export default function FocusSprintScreen({ route, navigation }) {
         setIsRunning(false);
         setIsPaused(false);
         setSessionComplete(true);
+        UsageStats.setSprintActive(false);
         vibrateSuccess();
 
         const totalSeconds = selectedDuration * 60;
@@ -125,6 +146,7 @@ export default function FocusSprintScreen({ route, navigation }) {
         if (isRunning) {
             appSwitchesRef.current += 1;
             setAppSwitchesDisplay(appSwitchesRef.current);
+            // Service handles vibration, but if triggered manually here we can do it:
             vibrateDeterrent();
         }
     };
@@ -161,9 +183,20 @@ export default function FocusSprintScreen({ route, navigation }) {
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference * (1 - progress);
 
+    const onRefresh = async () => {
+        if (!isRunning) {
+            setRefreshing(true);
+            // Simulate fetch state or fetch recent data
+            setTimeout(() => setRefreshing(false), 800);
+        }
+    };
+
     return (
         <SafeAreaView style={styles.safeArea}>
-            <View style={styles.container}>
+            <ScrollView
+                contentContainerStyle={styles.container}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.accent.blue} />}
+            >
                 {/* Header */}
                 <View style={styles.header}>
                     <Text style={styles.title}>Focus Sprint</Text>
@@ -320,7 +353,7 @@ export default function FocusSprintScreen({ route, navigation }) {
                         </TouchableOpacity>
                     </View>
                 )}
-            </View>
+            </ScrollView>
         </SafeAreaView>
     );
 }

@@ -9,6 +9,7 @@ import {
     TextInput,
     Alert,
     Modal,
+    ActivityIndicator,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,6 +29,8 @@ export default function LeaderboardScreen() {
     const [globalData, setGlobalData] = useState([]);
     const [groupMembers, setGroupMembers] = useState([]);
     const [copiedCode, setCopiedCode] = useState(false);
+    const [loadingGlobal, setLoadingGlobal] = useState(true);
+    const [loadingGroups, setLoadingGroups] = useState(true);
 
     useEffect(() => {
         loadGlobalLeaderboard();
@@ -41,6 +44,7 @@ export default function LeaderboardScreen() {
     }, [selectedGroup]);
 
     const loadGlobalLeaderboard = async () => {
+        setLoadingGlobal(true);
         try {
             const { data } = await supabase
                 .from('leaderboard_snapshots')
@@ -63,10 +67,13 @@ export default function LeaderboardScreen() {
         } catch (error) {
             console.log('Leaderboard fetch:', error.message);
             setGlobalData(getDemoGlobalData());
+        } finally {
+            setLoadingGlobal(false);
         }
     };
 
     const loadMyGroups = async () => {
+        setLoadingGroups(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
@@ -85,6 +92,8 @@ export default function LeaderboardScreen() {
             }
         } catch (error) {
             console.log('Groups fetch:', error.message);
+        } finally {
+            setLoadingGroups(false);
         }
     };
 
@@ -240,124 +249,136 @@ export default function LeaderboardScreen() {
                 </View>
 
                 {activeTab === 'global' ? (
-                    <>
-                        {/* Top 3 podium */}
-                        <View style={styles.podium}>
-                            {globalData.slice(0, 3).map((entry, i) => (
-                                <GlassCard
-                                    key={entry.rank}
-                                    glowColor={i === 0 ? Colors.accent.gold : null}
-                                    style={[styles.podiumCard, i === 0 && styles.podiumFirst]}
-                                >
-                                    <Text style={styles.podiumRank}>
-                                        {i === 0 ? '' : `#${entry.rank}`}
-                                        {i === 0 && <Ionicons name="medal" size={24} color={Colors.accent.gold} />}
-                                    </Text>
-                                    <Text style={styles.podiumName} numberOfLines={1}>{entry.displayName}</Text>
-                                    <Text style={[styles.podiumScore, i === 0 && { color: Colors.accent.gold }]}>
-                                        {entry.weeklyFocusScore}
-                                    </Text>
-                                    <View style={styles.streakRow}>
-                                        <Ionicons name="flame" size={12} color={Colors.accent.orange} />
-                                        <Text style={styles.podiumStreak}> {entry.streakLength}d</Text>
-                                    </View>
-                                </GlassCard>
-                            ))}
+                    loadingGlobal ? (
+                        <View style={styles.loaderContainer}>
+                            <ActivityIndicator size="large" color={Colors.accent.blue} />
                         </View>
-
-                        {/* Rest of the list */}
-                        {globalData.length > 3 && (
-                            <GlassCard style={styles.listCard}>
-                                {globalData.slice(3).map(entry => (
-                                    <View key={entry.rank} style={styles.listRow}>
-                                        <Text style={styles.listRank}>#{entry.rank}</Text>
-                                        <Text style={styles.listName} numberOfLines={1}>
-                                            {entry.displayName}
+                    ) : (
+                        <>
+                            {/* Top 3 podium */}
+                            <View style={styles.podium}>
+                                {globalData.slice(0, 3).map((entry, i) => (
+                                    <GlassCard
+                                        key={entry.rank}
+                                        glowColor={i === 0 ? Colors.accent.gold : null}
+                                        style={[styles.podiumCard, i === 0 && styles.podiumFirst]}
+                                    >
+                                        <Text style={styles.podiumRank}>
+                                            {i === 0 ? '' : `#${entry.rank}`}
+                                            {i === 0 && <Ionicons name="medal" size={24} color={Colors.accent.gold} />}
                                         </Text>
-                                        <Text style={styles.listScore}>{entry.weeklyFocusScore}</Text>
+                                        <Text style={styles.podiumName} numberOfLines={1}>{entry.displayName}</Text>
+                                        <Text style={[styles.podiumScore, i === 0 && { color: Colors.accent.gold }]}>
+                                            {entry.weeklyFocusScore}
+                                        </Text>
                                         <View style={styles.streakRow}>
-                                            <Ionicons name="flame" size={10} color={Colors.accent.orange} />
-                                            <Text style={styles.listStreak}>{entry.streakLength}</Text>
+                                            <Ionicons name="flame" size={12} color={Colors.accent.orange} />
+                                            <Text style={styles.podiumStreak}> {entry.streakLength}d</Text>
                                         </View>
-                                    </View>
+                                    </GlassCard>
                                 ))}
-                            </GlassCard>
-                        )}
-                    </>
-                ) : (
-                    <>
-                        {/* Group action buttons */}
-                        <View style={styles.groupActions}>
-                            <TouchableOpacity style={styles.actionBtn} onPress={() => setShowCreateModal(true)}>
-                                <Ionicons name="add-circle" size={20} color={Colors.accent.blue} />
-                                <Text style={styles.actionBtnText}> Create Group</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.actionBtn} onPress={() => setShowJoinModal(true)}>
-                                <Ionicons name="enter" size={20} color={Colors.accent.purple} />
-                                <Text style={[styles.actionBtnText, { color: Colors.accent.purple }]}> Join Group</Text>
-                            </TouchableOpacity>
-                        </View>
+                            </View>
 
-                        {myGroups.length === 0 ? (
-                            <GlassCard style={styles.emptyCard}>
-                                <Ionicons name="people" size={40} color={Colors.text.muted} />
-                                <Text style={styles.emptyText}>No study groups yet</Text>
-                                <Text style={styles.emptySubtext}>Create or join a group to compete with friends!</Text>
-                            </GlassCard>
-                        ) : (
-                            <>
-                                {/* Group selector */}
-                                {myGroups.length > 1 && (
-                                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupSelector}>
-                                        {myGroups.map(g => (
+                            {/* Rest of the list */}
+                            {globalData.length > 3 && (
+                                <GlassCard style={styles.listCard}>
+                                    {globalData.slice(3).map(entry => (
+                                        <View key={entry.rank} style={styles.listRow}>
+                                            <Text style={styles.listRank}>#{entry.rank}</Text>
+                                            <Text style={styles.listName} numberOfLines={1}>
+                                                {entry.displayName}
+                                            </Text>
+                                            <Text style={styles.listScore}>{entry.weeklyFocusScore}</Text>
+                                            <View style={styles.streakRow}>
+                                                <Ionicons name="flame" size={10} color={Colors.accent.orange} />
+                                                <Text style={styles.listStreak}>{entry.streakLength}</Text>
+                                            </View>
+                                        </View>
+                                    ))}
+                                </GlassCard>
+                            )}
+                        </>
+                    )
+                ) : (
+                    loadingGroups ? (
+                        <View style={styles.loaderContainer}>
+                            <ActivityIndicator size="large" color={Colors.accent.purple} />
+                        </View>
+                    ) : (
+                        <>
+                            {/* Group action buttons */}
+                            <View style={styles.groupActions}>
+                                <TouchableOpacity style={styles.actionBtn} onPress={() => setShowCreateModal(true)}>
+                                    <Ionicons name="add-circle" size={20} color={Colors.accent.blue} />
+                                    <Text style={styles.actionBtnText}> Create Group</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.actionBtn} onPress={() => setShowJoinModal(true)}>
+                                    <Ionicons name="enter" size={20} color={Colors.accent.purple} />
+                                    <Text style={[styles.actionBtnText, { color: Colors.accent.purple }]}> Join Group</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {myGroups.length === 0 ? (
+                                <GlassCard style={styles.emptyCard}>
+                                    <Ionicons name="people" size={40} color={Colors.text.muted} />
+                                    <Text style={styles.emptyText}>No study groups yet</Text>
+                                    <Text style={styles.emptySubtext}>Create or join a group to compete with friends!</Text>
+                                </GlassCard>
+                            ) : (
+                                <>
+                                    {/* Group selector */}
+                                    {myGroups.length > 1 && (
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupSelector}>
+                                            {myGroups.map(g => (
+                                                <TouchableOpacity
+                                                    key={g.id}
+                                                    style={[styles.groupChip, selectedGroup?.id === g.id && styles.groupChipActive]}
+                                                    onPress={() => setSelectedGroup(g)}
+                                                >
+                                                    <Text style={[styles.groupChipText, selectedGroup?.id === g.id && styles.groupChipTextActive]}>
+                                                        {g.name}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
+                                    )}
+
+                                    {/* Selected group info */}
+                                    {selectedGroup && (
+                                        <GlassCard style={styles.groupHeader}>
+                                            <Text style={styles.groupName}>{selectedGroup.name}</Text>
+                                            <Text style={styles.groupMeta}>{groupMembers.length} members</Text>
                                             <TouchableOpacity
-                                                key={g.id}
-                                                style={[styles.groupChip, selectedGroup?.id === g.id && styles.groupChipActive]}
-                                                onPress={() => setSelectedGroup(g)}
+                                                style={styles.inviteButton}
+                                                onPress={() => handleCopyJoinCode(selectedGroup.join_code)}
                                             >
-                                                <Text style={[styles.groupChipText, selectedGroup?.id === g.id && styles.groupChipTextActive]}>
-                                                    {g.name}
+                                                <Ionicons
+                                                    name={copiedCode ? 'checkmark-circle' : 'copy'}
+                                                    size={14}
+                                                    color={Colors.accent.purple}
+                                                />
+                                                <Text style={styles.inviteText}>
+                                                    {copiedCode ? ' Copied!' : ` ${selectedGroup.join_code}`}
                                                 </Text>
                                             </TouchableOpacity>
-                                        ))}
-                                    </ScrollView>
-                                )}
+                                        </GlassCard>
+                                    )}
 
-                                {/* Selected group info */}
-                                {selectedGroup && (
-                                    <GlassCard style={styles.groupHeader}>
-                                        <Text style={styles.groupName}>{selectedGroup.name}</Text>
-                                        <Text style={styles.groupMeta}>{groupMembers.length} members</Text>
-                                        <TouchableOpacity
-                                            style={styles.inviteButton}
-                                            onPress={() => handleCopyJoinCode(selectedGroup.join_code)}
-                                        >
-                                            <Ionicons
-                                                name={copiedCode ? 'checkmark-circle' : 'copy'}
-                                                size={14}
-                                                color={Colors.accent.purple}
-                                            />
-                                            <Text style={styles.inviteText}>
-                                                {copiedCode ? ' Copied!' : ` ${selectedGroup.join_code}`}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    </GlassCard>
-                                )}
-
-                                {/* Group members */}
-                                {groupMembers.length > 0 && (
-                                    <GlassCard style={styles.listCard}>
-                                        {groupMembers.map(member => (
-                                            <View key={member.userId} style={styles.listRow}>
-                                                <Text style={styles.listRank}>#{member.rank}</Text>
-                                                <Text style={styles.listName}>{member.displayName}</Text>
-                                            </View>
-                                        ))}
-                                    </GlassCard>
-                                )}
-                            </>
-                        )}
-                    </>
+                                    {/* Group members */}
+                                    {groupMembers.length > 0 && (
+                                        <GlassCard style={styles.listCard}>
+                                            {groupMembers.map(member => (
+                                                <View key={member.userId} style={styles.listRow}>
+                                                    <Text style={styles.listRank}>#{member.rank}</Text>
+                                                    <Text style={styles.listName}>{member.displayName}</Text>
+                                                </View>
+                                            ))}
+                                        </GlassCard>
+                                    )}
+                                </>
+                            )}
+                        </>
+                    )
                 )}
 
                 <View style={{ height: 100 }} />
@@ -431,6 +452,7 @@ const styles = StyleSheet.create({
     safeArea: { flex: 1, backgroundColor: Colors.bg.primary },
     container: { flex: 1 },
     content: { padding: Spacing.md },
+    loaderContainer: { padding: Spacing.xl, alignItems: 'center', justifyContent: 'center' },
     headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
     title: { ...Typography.h1, color: Colors.text.primary },
     subtitle: { ...Typography.caption, color: Colors.text.muted, marginBottom: Spacing.lg },

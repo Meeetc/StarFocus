@@ -15,6 +15,24 @@ class UsageStatsModule(private val reactContext: ReactApplicationContext) :
 
     override fun getName(): String = "UsageStatsModule"
 
+    companion object {
+        private var currentReactContext: ReactApplicationContext? = null
+
+        fun incrementAppSwitches() {
+            currentReactContext?.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                ?.emit("onAppSwitchDetected", null)
+        }
+    }
+
+    init {
+        currentReactContext = reactContext
+    }
+
+    @ReactMethod
+    fun setSprintActive(active: Boolean) {
+        com.starfocus.services.StarFocusAccessibilityService.isSprintActive = active
+    }
+
     /**
      * Check if the PACKAGE_USAGE_STATS permission is granted.
      */

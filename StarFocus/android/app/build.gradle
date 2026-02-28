@@ -90,7 +90,7 @@ android {
 
     namespace "com.starfocus"
     defaultConfig {
-        applicationId "com.starfocus"
+        applicationId "com.starfocus.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
