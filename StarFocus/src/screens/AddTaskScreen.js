@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Typography, Spacing, BorderRadius } from '../theme';
 import GlassCard from '../components/GlassCard';
+import { saveTask } from '../services/taskStorage';
 
 const CATEGORIES = [
     { id: 'club', label: '🎯 Club', color: Colors.accent.blue },
@@ -27,15 +28,31 @@ export default function AddTaskScreen({ navigation }) {
     const [priority, setPriority] = useState(5);
     const [completion, setCompletion] = useState(0);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!title.trim()) {
             Alert.alert('Required', 'Please enter a task title');
             return;
         }
-        // In real app, save to Supabase
-        Alert.alert('✅ Task Added', `"${title}" has been added to your dashboard.`, [
-            { text: 'OK', onPress: () => navigation.goBack() },
-        ]);
+        try {
+            // Create deadline 7 days from now by default
+            const deadline = new Date();
+            deadline.setDate(deadline.getDate() + 7);
+
+            await saveTask({
+                title: title.trim(),
+                category,
+                priorityScore: priority,
+                completionPercent: completion,
+                deadline: deadline.toISOString(),
+                dueDate: deadline.toISOString(),
+                source: 'manual',
+            });
+            Alert.alert('✅ Task Added', `"${title}" has been added to your dashboard.`, [
+                { text: 'OK', onPress: () => navigation.goBack() },
+            ]);
+        } catch (error) {
+            Alert.alert('Error', 'Failed to save task. Please try again.');
+        }
     };
 
     return (

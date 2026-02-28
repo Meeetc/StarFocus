@@ -1,5 +1,5 @@
 // DashboardScreen — The Heatmap Dashboard (Command Center)
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     View,
     Text,
@@ -10,15 +10,14 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Typography, Spacing, BorderRadius } from '../theme';
 import GlassCard from '../components/GlassCard';
 import TaskCard from '../components/TaskCard';
 import WorkloadGauge from '../components/WorkloadGauge';
 import { rankTasks } from '../services/priority';
 import { calculateWorkloadScore } from '../services/workload';
-import { supabase } from '../lib/supabase';
-import { fullSync } from '../services/classroom';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { getTasks } from '../services/taskStorage';
 
 const FILTER_TABS = ['All', 'Classroom', 'Manual', '🔴 Critical'];
 
@@ -30,20 +29,8 @@ export default function DashboardScreen({ navigation }) {
 
     const loadTasks = async () => {
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            // Fetch manual tasks from Supabase
-            const { data, error } = await supabase
-                .from('tasks')
-                .select('*')
-                .eq('user_id', user.id);
-
-            if (error) throw error;
-
-            // For the prototype, we merge manual tasks with classroom tasks if a token is available
-            // In a real app, classroom tasks would be persisted in Supabase too
-            setTasks(data || []);
+            const localTasks = await getTasks();
+            setTasks(localTasks);
         } catch (error) {
             console.error('Error loading tasks:', error);
         } finally {
@@ -51,29 +38,16 @@ export default function DashboardScreen({ navigation }) {
         }
     };
 
-    const syncClassroom = async () => {
-        try {
-            const tokens = await GoogleSignin.getTokens();
-            if (tokens.accessToken) {
-                const classroomTasks = await fullSync(tokens.accessToken);
-                setTasks(prev => {
-                    const manualTasks = prev.filter(t => t.source === 'manual');
-                    return [...manualTasks, ...classroomTasks];
-                });
-            }
-        } catch (error) {
-            console.error('Classroom sync failed:', error);
-        }
-    };
-
-    useEffect(() => {
-        loadTasks().then(() => syncClassroom());
-    }, []);
+    // Reload tasks every time this screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            loadTasks();
+        }, [])
+    );
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
         await loadTasks();
-        await syncClassroom();
         setRefreshing(false);
     }, []);
 

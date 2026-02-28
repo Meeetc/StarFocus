@@ -1,5 +1,5 @@
 // ProfileScreen — Profile, Badges, Streaks & Settings
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -7,28 +7,77 @@ import {
     ScrollView,
     TouchableOpacity,
     Switch,
+    Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Colors, Typography, Spacing, BorderRadius } from '../theme';
 import GlassCard from '../components/GlassCard';
 import { getAllBadgesWithStatus } from '../services/badges';
-
-// Demo user data
-const DEMO_USER = {
-    displayName: 'Meet Chordia',
-    email: 'meet@example.com',
-    currentStreak: 4,
-    longestStreak: 12,
-    freezeTokens: 1,
-    totalSprints: 47,
-    totalFocusHours: 38,
-    leaderboardOptIn: true,
-    earnedBadges: ['streak_master'],
-};
+import { supabase } from '../lib/supabase';
 
 export default function ProfileScreen() {
-    const [leaderboardOptIn, setLeaderboardOptIn] = useState(DEMO_USER.leaderboardOptIn);
-    const badges = getAllBadgesWithStatus(DEMO_USER.earnedBadges);
+    const [leaderboardOptIn, setLeaderboardOptIn] = useState(true);
+    const [user, setUser] = useState(null);
+    const [signingOut, setSigningOut] = useState(false);
+
+    // Demo stats (kept as placeholders — real data needs usage tracking)
+    const stats = {
+        currentStreak: 4,
+        longestStreak: 12,
+        freezeTokens: 1,
+        totalSprints: 47,
+        totalFocusHours: 38,
+        earnedBadges: ['streak_master'],
+    };
+
+    const badges = getAllBadgesWithStatus(stats.earnedBadges);
+
+    useEffect(() => {
+        loadUser();
+    }, []);
+
+    const loadUser = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                setUser({
+                    displayName: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+                    email: user.email || '',
+                    avatar: user.user_metadata?.avatar_url || null,
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load user:', error);
+        }
+    };
+
+    const handleSignOut = async () => {
+        Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Sign Out',
+                style: 'destructive',
+                onPress: async () => {
+                    setSigningOut(true);
+                    try {
+                        await GoogleSignin.signOut();
+                    } catch (e) {
+                        // Google sign out may fail if not signed in via Google
+                    }
+                    try {
+                        await supabase.auth.signOut();
+                    } catch (e) {
+                        console.error('Sign out error:', e);
+                    }
+                    setSigningOut(false);
+                },
+            },
+        ]);
+    };
+
+    const displayName = user?.displayName || 'Loading...';
+    const email = user?.email || '';
 
     return (
         <SafeAreaView style={styles.safeArea}>
@@ -36,29 +85,29 @@ export default function ProfileScreen() {
                 {/* Profile header */}
                 <View style={styles.profileHeader}>
                     <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>{DEMO_USER.displayName.charAt(0)}</Text>
+                        <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
                     </View>
-                    <Text style={styles.name}>{DEMO_USER.displayName}</Text>
-                    <Text style={styles.email}>{DEMO_USER.email}</Text>
+                    <Text style={styles.name}>{displayName}</Text>
+                    <Text style={styles.email}>{email}</Text>
                 </View>
 
                 {/* Streak display */}
-                <GlassCard glowColor={DEMO_USER.currentStreak >= 7 ? Colors.accent.gold : null} style={styles.streakCard}>
+                <GlassCard glowColor={stats.currentStreak >= 7 ? Colors.accent.gold : null} style={styles.streakCard}>
                     <View style={styles.streakRow}>
                         <View style={styles.streakMain}>
                             <Text style={styles.fireEmoji}>🔥</Text>
-                            <Text style={styles.streakNumber}>{DEMO_USER.currentStreak}</Text>
+                            <Text style={styles.streakNumber}>{stats.currentStreak}</Text>
                             <Text style={styles.streakLabel}>Day Streak</Text>
                         </View>
                     </View>
                     <View style={styles.streakMeta}>
                         <View style={styles.streakStat}>
-                            <Text style={styles.streakStatValue}>{DEMO_USER.longestStreak}</Text>
+                            <Text style={styles.streakStatValue}>{stats.longestStreak}</Text>
                             <Text style={styles.streakStatLabel}>Longest</Text>
                         </View>
                         <View style={styles.divider} />
                         <View style={styles.streakStat}>
-                            <Text style={styles.streakStatValue}>❄️ {DEMO_USER.freezeTokens}</Text>
+                            <Text style={styles.streakStatValue}>❄️ {stats.freezeTokens}</Text>
                             <Text style={styles.streakStatLabel}>Freeze Tokens</Text>
                         </View>
                     </View>
@@ -67,11 +116,11 @@ export default function ProfileScreen() {
                 {/* Stats grid */}
                 <View style={styles.statsGrid}>
                     <GlassCard style={styles.statCard}>
-                        <Text style={[styles.statValue, { color: Colors.accent.blue }]}>{DEMO_USER.totalSprints}</Text>
+                        <Text style={[styles.statValue, { color: Colors.accent.blue }]}>{stats.totalSprints}</Text>
                         <Text style={styles.statLabel}>Total Sprints</Text>
                     </GlassCard>
                     <GlassCard style={styles.statCard}>
-                        <Text style={[styles.statValue, { color: Colors.accent.purple }]}>{DEMO_USER.totalFocusHours}h</Text>
+                        <Text style={[styles.statValue, { color: Colors.accent.purple }]}>{stats.totalFocusHours}h</Text>
                         <Text style={styles.statLabel}>Focus Hours</Text>
                     </GlassCard>
                 </View>
@@ -127,8 +176,12 @@ export default function ProfileScreen() {
                 </GlassCard>
 
                 {/* Sign out */}
-                <TouchableOpacity style={styles.signOutButton}>
-                    <Text style={styles.signOutText}>Sign Out</Text>
+                <TouchableOpacity
+                    style={[styles.signOutButton, signingOut && { opacity: 0.5 }]}
+                    onPress={handleSignOut}
+                    disabled={signingOut}
+                >
+                    <Text style={styles.signOutText}>{signingOut ? 'Signing Out...' : 'Sign Out'}</Text>
                 </TouchableOpacity>
 
                 <View style={{ height: 100 }} />
