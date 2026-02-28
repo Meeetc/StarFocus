@@ -2,22 +2,16 @@
 // Deterministic formula: no LLM dependency
 //
 // Priority = (gradeWeightage × (1 − completionPercent)) / max(timeRemainingHours, 1) × quizPrepMultiplier
+//
+// ZONES are time-based (absolute), NOT relative to other tasks.
+// This prevents one task's update from shifting another task's zone.
 
 /**
  * Calculate raw priority score for a single task.
- * @param {Object} task
- * @param {number} task.gradeWeightage - 0.0 to 1.0
- * @param {number} task.completionPercent - 0 to 100
- * @param {string} task.dueDate - ISO 8601 datetime
- * @param {string} task.workType - ASSIGNMENT | SHORT_ANSWER_QUESTION | MULTIPLE_CHOICE
- * @param {string} task.source - classroom | manual
- * @param {number} [task.priorityScore] - 1–10 for manual tasks
- * @returns {number} Raw priority score (unbounded)
  */
 export function calculateRawPriority(task) {
     const { gradeWeightage, completionPercent, dueDate, workType, source, priorityScore } = task;
 
-    // Manual tasks use user-set priority score (normalized to 0–1)
     if (source === 'manual') {
         const normalizedPriority = (priorityScore || 5) / 10;
         const completionFactor = 1 - (completionPercent || 0) / 100;
@@ -25,47 +19,69 @@ export function calculateRawPriority(task) {
         return (normalizedPriority * completionFactor) / Math.max(timeRemaining, 1);
     }
 
-    // Classroom tasks use the deterministic formula
     const completionFactor = 1 - (completionPercent || 0) / 100;
     const timeRemaining = getTimeRemainingHours(dueDate);
     const quizMultiplier = getQuizPrepMultiplier(workType);
-
     return ((gradeWeightage || 0.5) * completionFactor) / Math.max(timeRemaining, 1) * quizMultiplier;
 }
 
 /**
  * Get hours remaining until deadline.
- * @param {string} dueDate - ISO 8601 datetime
- * @returns {number} Hours remaining (minimum 0)
+ * Returns negative values for overdue tasks.
  */
 export function getTimeRemainingHours(dueDate) {
     if (!dueDate) return 168; // Default 1 week if no deadline
-    const now = new Date();
-    const due = new Date(dueDate);
-    const diffMs = due - now;
-    return Math.max(diffMs / (1000 * 60 * 60), 0);
+    const diffMs = new Date(dueDate) - new Date();
+    return diffMs / (1000 * 60 * 60); // Can be negative (overdue)
 }
 
 /**
  * Get the quiz prep multiplier based on work type.
- * @param {string} workType
- * @returns {number} Multiplier (1.0, 1.5, or 1.8)
  */
 export function getQuizPrepMultiplier(workType) {
     switch (workType) {
         case 'SHORT_ANSWER_QUESTION':
         case 'MULTIPLE_CHOICE':
             return 1.5;
-        // Single-attempt quizzes get 1.8× — detected via additional metadata
         default:
             return 1.0;
     }
 }
 
 /**
- * Normalize priorities across all tasks using min-max normalization.
- * @param {Array} tasks - Array of tasks with rawPriority
- * @returns {Array} Tasks with normalized priorityScore (0.0–1.0) and priorityZone
+ * Assign priority zone using ABSOLUTE time-based thresholds.
+ * This is independent per task — updating one task NEVER changes another's zone.
+ *
+ * For classroom tasks: based on time remaining
+ *   Red    → overdue OR < 24 hours
+ *   Amber  → 24 – 96 hours (4 days)
+ *   Green  → > 96 hours
+ *
+ * For manual tasks: based on user-set priority score (1–10)
+ *   Red    → 8–10
+ *   Amber  → 4–7
+ *   Green  → 1–3
+ */
+export function getAbsolutePriorityZone(task) {
+    const hoursLeft = getTimeRemainingHours(task.dueDate || task.deadline);
+
+    if (task.source === 'manual') {
+        const p = task.priorityScore || task.priorityScore_manual || 5;
+        if (p >= 8) return 'red';
+        if (p >= 4) return 'amber';
+        return 'green';
+    }
+
+    // Also bump urgently-incomplete tasks with little time
+    if (hoursLeft <= 0) return 'red';        // Overdue
+    if (hoursLeft <= 24) return 'red';       // Due today
+    if (hoursLeft <= 96) return 'amber';     // Due within 4 days
+    return 'green';
+}
+
+/**
+ * Compute a normalized priority score (0–1) for SORTING only.
+ * Zones are assigned independently via getAbsolutePriorityZone.
  */
 export function normalizePriorities(tasks) {
     if (tasks.length === 0) return [];
@@ -73,69 +89,51 @@ export function normalizePriorities(tasks) {
     const rawScores = tasks.map(t => t.rawPriority);
     const min = Math.min(...rawScores);
     const max = Math.max(...rawScores);
-    const range = max - min || 1; // Avoid division by zero
+    const range = max - min || 1;
 
     return tasks.map(task => {
-        const normalizedScore = (task.rawPriority - min) / range;
-
-        // Override: quizzes with < 24 hours → always Red
-        const timeRemaining = getTimeRemainingHours(task.dueDate);
-        const isUrgentQuiz = timeRemaining < 24 &&
-            (task.workType === 'SHORT_ANSWER_QUESTION' || task.workType === 'MULTIPLE_CHOICE');
-
-        const priorityScore = isUrgentQuiz ? Math.max(normalizedScore, 0.75) : normalizedScore;
-        const priorityZone = getPriorityZone(priorityScore);
+        const priorityScore = (task.rawPriority - min) / range;
+        const priorityZone = getAbsolutePriorityZone(task); // absolute, not relative
 
         return {
             ...task,
             priorityScore,
             priorityZone,
-            timeRemaining: Math.round(timeRemaining),
+            timeRemaining: getTimeRemainingHours(task.dueDate || task.deadline),
         };
     });
 }
 
 /**
- * Assign priority zone based on normalized score.
- * @param {number} score - 0.0 to 1.0
- * @returns {string} red | amber | green
- */
-export function getPriorityZone(score) {
-    if (score > 0.7) return 'red';
-    if (score >= 0.3) return 'amber';
-    return 'green';
-}
-
-/**
  * Process and rank all tasks.
- * @param {Array} tasks - Array of raw task objects
- * @returns {Array} Sorted array with priority scores and zones
  */
 export function rankTasks(tasks) {
-    // Filter out completed tasks
     const activeTasks = tasks.filter(t =>
         (t.completionPercent || 0) < 100 &&
         t.submissionStatus !== 'TURNED_IN'
     );
 
-    // Calculate raw priorities
     const withRaw = activeTasks.map(task => ({
         ...task,
         rawPriority: calculateRawPriority(task),
     }));
 
-    // Normalize and assign zones
     const ranked = normalizePriorities(withRaw);
 
-    // Sort by priority score descending (highest priority first)
-    return ranked.sort((a, b) => b.priorityScore - a.priorityScore);
+    // Sort: Red first, then Amber, then Green, within each zone by time remaining (ascending)
+    const zoneOrder = { red: 0, amber: 1, green: 2 };
+    return ranked.sort((a, b) => {
+        const zoneDiff = zoneOrder[a.priorityZone] - zoneOrder[b.priorityZone];
+        if (zoneDiff !== 0) return zoneDiff;
+        return a.timeRemaining - b.timeRemaining; // sooner deadline first
+    });
 }
 
 export default {
     calculateRawPriority,
     getTimeRemainingHours,
     getQuizPrepMultiplier,
+    getAbsolutePriorityZone,
     normalizePriorities,
-    getPriorityZone,
     rankTasks,
 };

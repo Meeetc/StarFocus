@@ -1,51 +1,51 @@
-// JavaScript Bridge — Vibration Native Module
-import { NativeModules, Platform } from 'react-native';
-
-const { VibrationModule } = NativeModules;
+// Vibration Module — Uses expo-haptics for tactile feedback
+// Replaces the bare NativeModule stub which had no Kotlin implementation.
+import * as Haptics from 'expo-haptics';
 
 /**
  * Vibrate with a custom waveform pattern.
+ * Falls back to repeated heavy impacts on Expo.
  * @param {number[]} pattern - Alternating wait/vibrate durations in ms
- * @param {number[]} amplitudes - Amplitude for each segment (0=off, 1-255)
- * @param {number} repeat - Index to repeat from (-1 for no repeat)
  */
-export function vibrateWaveform(pattern, amplitudes, repeat = -1) {
-    if (Platform.OS !== 'android' || !VibrationModule) return;
-    VibrationModule.vibrateWaveform(pattern, amplitudes, repeat);
+export function vibrateWaveform(pattern = [], _amplitudes, _repeat) {
+    // Expo Haptics doesn't support arbitrary waveforms; use a heavy impact.
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 }
 
 /**
  * Single pulse vibration.
- * @param {number} durationMs - Duration in milliseconds
- * @param {number} amplitude - Intensity 1–255
+ * @param {number} durationMs - Ignored on Expo (haptics are fixed-duration)
+ * @param {number} amplitude - Maps to Light/Medium/Heavy
  */
 export function vibratePulse(durationMs = 200, amplitude = 128) {
-    if (Platform.OS !== 'android' || !VibrationModule) return;
-    VibrationModule.vibratePulse(durationMs, amplitude);
+    const style = amplitude > 180
+        ? Haptics.ImpactFeedbackStyle.Heavy
+        : amplitude > 80
+            ? Haptics.ImpactFeedbackStyle.Medium
+            : Haptics.ImpactFeedbackStyle.Light;
+    Haptics.impactAsync(style);
 }
 
 /**
  * Uncomfortable escalating vibration for distraction deterrence.
+ * Simulates urgency with notification feedback.
  */
 export function vibrateDeterrent() {
-    if (Platform.OS !== 'android' || !VibrationModule) return;
-    VibrationModule.vibrateDeterrent();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
 }
 
 /**
  * Gentle success haptic feedback.
  */
 export function vibrateSuccess() {
-    if (Platform.OS !== 'android' || !VibrationModule) return;
-    VibrationModule.vibrateSuccess();
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 }
 
 /**
- * Cancel any ongoing vibration.
+ * Cancel any ongoing vibration (no-op on Expo — haptics are fire-and-forget).
  */
 export function cancelVibration() {
-    if (Platform.OS !== 'android' || !VibrationModule) return;
-    VibrationModule.cancel();
+    // Expo Haptics are instantaneous; nothing to cancel.
 }
 
 export default {

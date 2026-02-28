@@ -1,51 +1,48 @@
-// JavaScript Bridge — UsageStats Native Module
-import { NativeModules, Platform } from 'react-native';
-
-const { UsageStatsModule } = NativeModules;
+// UsageStats Module — Graceful no-op shim for Expo builds
+// The real Android UsageStatsManager API requires a native Kotlin module and the
+// PACKAGE_USAGE_STATS permission, which requires manual user approval in Settings.
+// This shim keeps all call sites working while the app tracks focus in-session
+// via the sim buttons (or a future native implementation).
 
 /**
  * Check if usage stats permission is granted.
- * @returns {Promise<boolean>}
+ * @returns {Promise<boolean>} Always false in this shim.
  */
 export async function hasUsagePermission() {
-    if (Platform.OS !== 'android') return false;
-    return await UsageStatsModule.hasPermission();
+    return false;
 }
 
 /**
  * Open system settings to grant usage access.
+ * No-op in this shim.
  */
 export function requestUsagePermission() {
-    if (Platform.OS !== 'android') return;
-    UsageStatsModule.requestPermission();
+    // Requires native Kotlin integration to open Settings.ACTION_USAGE_ACCESS_SETTINGS
+    console.warn('[UsageStats] Native usage stats not available in this build.');
 }
 
 /**
  * Get app usage stats for the given time interval.
- * @param {number} intervalMs - Duration in ms (default 24 hours)
- * @returns {Promise<Array>} Array of { packageName, totalTimeMs, totalTimeMinutes, lastTimeUsed }
+ * @returns {Promise<Array>} Empty array in this shim.
  */
-export async function getUsageStats(intervalMs = 24 * 60 * 60 * 1000) {
-    if (Platform.OS !== 'android') return [];
-    return await UsageStatsModule.getUsageStats(intervalMs);
+export async function getUsageStats(_intervalMs) {
+    return [];
 }
 
 /**
  * Get the currently foreground app.
- * @returns {Promise<Object>} { packageName, lastTimeUsed }
+ * @returns {Promise<Object>} Unknown package in this shim.
  */
 export async function getForegroundApp() {
-    if (Platform.OS !== 'android') return { packageName: 'unknown' };
-    return await UsageStatsModule.getForegroundApp();
+    return { packageName: 'unknown', lastTimeUsed: Date.now() };
 }
 
 /**
  * Get total screen time today in minutes.
- * @returns {Promise<number>}
+ * @returns {Promise<number>} Always 0 in this shim.
  */
 export async function getTodayScreenTime() {
-    if (Platform.OS !== 'android') return 0;
-    return await UsageStatsModule.getTodayScreenTime();
+    return 0;
 }
 
 export default {

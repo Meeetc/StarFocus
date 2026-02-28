@@ -1,12 +1,12 @@
-// AppNavigator — Bottom tabs + stack navigation
-// Guidelines: 3-5 tab icons, simple line icons, filled when active
+// App Navigation — Bottom Tabs + Stack Navigators
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text, StyleSheet } from 'react-native';
-import { Colors, Spacing, BorderRadius } from '../theme';
+import { Colors, Typography } from '../theme';
+import { Text } from 'react-native';
 
 import DashboardScreen from '../screens/DashboardScreen';
+import AssignmentsScreen from '../screens/AssignmentsScreen';
 import FocusSprintScreen from '../screens/FocusSprintScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
 import ProgressScreen from '../screens/ProgressScreen';
@@ -14,97 +14,104 @@ import ProfileScreen from '../screens/ProfileScreen';
 import AddTaskScreen from '../screens/AddTaskScreen';
 
 const Tab = createBottomTabNavigator();
-const Stack = createNativeStackNavigator();
+const HomeStack = createNativeStackNavigator();
 
-function DashboardStack() {
+function HomeStackNavigator() {
     return (
-        <Stack.Navigator
-            screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: Colors.bg.primary },
-            }}
-        >
-            <Stack.Screen name="DashboardMain" component={DashboardScreen} />
-            <Stack.Screen
+        <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+            <HomeStack.Screen name="Dashboard" component={DashboardScreen} />
+            <HomeStack.Screen
                 name="AddTask"
                 component={AddTaskScreen}
                 options={{ presentation: 'modal' }}
             />
-        </Stack.Navigator>
+        </HomeStack.Navigator>
     );
 }
 
-function FocusStack() {
+const FocusStack = createNativeStackNavigator();
+function FocusStackNavigator() {
     return (
-        <Stack.Navigator
-            screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: Colors.bg.primary },
-            }}
-        >
-            <Stack.Screen name="FocusSprintMain" component={FocusSprintScreen} />
-        </Stack.Navigator>
+        <FocusStack.Navigator screenOptions={{ headerShown: false }}>
+            <FocusStack.Screen name="FocusSprint" component={FocusSprintScreen} />
+        </FocusStack.Navigator>
     );
 }
 
-const TAB_ICONS = {
-    Home: { active: '🏠', inactive: '🏡' },
-    Focus: { active: '⚡', inactive: '⚡' },
-    Leaderboard: { active: '🏆', inactive: '🏆' },
-    Progress: { active: '📊', inactive: '📊' },
-    Profile: { active: '👤', inactive: '👤' },
-};
+function TabIcon({ emoji, focused }) {
+    return (
+        <Text style={{ fontSize: focused ? 22 : 19, opacity: focused ? 1 : 0.55 }}>
+            {emoji}
+        </Text>
+    );
+}
 
 export default function AppNavigator() {
     return (
         <Tab.Navigator
-            screenOptions={({ route }) => ({
+            screenOptions={{
                 headerShown: false,
-                tabBarStyle: styles.tabBar,
+                tabBarStyle: {
+                    backgroundColor: Colors.bg.secondary,
+                    borderTopColor: 'rgba(255,255,255,0.06)',
+                    borderTopWidth: 1,
+                    paddingBottom: 6,
+                    paddingTop: 6,
+                    height: 62,
+                },
                 tabBarActiveTintColor: Colors.accent.blue,
                 tabBarInactiveTintColor: Colors.text.muted,
-                tabBarLabel: ({ focused, color }) => (
-                    <Text style={[styles.tabLabel, { color }]}>
-                        {route.name}
-                    </Text>
-                ),
-                tabBarIcon: ({ focused }) => (
-                    <Text style={[styles.tabIcon, focused && styles.tabIconActive]}>
-                        {focused ? TAB_ICONS[route.name]?.active : TAB_ICONS[route.name]?.inactive}
-                    </Text>
-                ),
-            })}
+                tabBarLabelStyle: { ...Typography.label, fontSize: 9, marginTop: 2 },
+            }}
         >
-            <Tab.Screen name="Home" component={DashboardStack} />
-            <Tab.Screen name="Focus" component={FocusStack} />
-            <Tab.Screen name="Leaderboard" component={LeaderboardScreen} />
-            <Tab.Screen name="Progress" component={ProgressScreen} />
-            <Tab.Screen name="Profile" component={ProfileScreen} />
+            <Tab.Screen
+                name="HomeTab"
+                component={HomeStackNavigator}
+                options={{
+                    tabBarLabel: 'Home',
+                    tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+                }}
+            />
+            <Tab.Screen
+                name="AssignmentsTab"
+                component={AssignmentsScreen}
+                options={{
+                    tabBarLabel: 'Tasks',
+                    tabBarIcon: ({ focused }) => <TabIcon emoji="📚" focused={focused} />,
+                }}
+            />
+            <Tab.Screen
+                name="FocusTab"
+                component={FocusStackNavigator}
+                options={{
+                    tabBarLabel: 'Focus',
+                    tabBarIcon: ({ focused }) => <TabIcon emoji="⚡" focused={focused} />,
+                }}
+            />
+            <Tab.Screen
+                name="LeaderboardTab"
+                component={LeaderboardScreen}
+                options={{
+                    tabBarLabel: 'Board',
+                    tabBarIcon: ({ focused }) => <TabIcon emoji="🏆" focused={focused} />,
+                }}
+            />
+            <Tab.Screen
+                name="ProgressTab"
+                component={ProgressScreen}
+                options={{
+                    tabBarLabel: 'Stats',
+                    tabBarIcon: ({ focused }) => <TabIcon emoji="📊" focused={focused} />,
+                }}
+            />
+            <Tab.Screen
+                name="ProfileTab"
+                component={ProfileScreen}
+                options={{
+                    tabBarLabel: 'Profile',
+                    tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
+                }}
+            />
         </Tab.Navigator>
     );
 }
-
-const styles = StyleSheet.create({
-    tabBar: {
-        backgroundColor: Colors.bg.secondary,
-        borderTopColor: Colors.glass.border,
-        borderTopWidth: 1,
-        height: 80,
-        paddingBottom: 20,
-        paddingTop: 8,
-        position: 'absolute',
-        elevation: 20,
-    },
-    tabLabel: {
-        fontSize: 10,
-        fontWeight: '600',
-    },
-    tabIcon: {
-        fontSize: 20,
-        opacity: 0.6,
-    },
-    tabIconActive: {
-        fontSize: 22,
-        opacity: 1,
-    },
-});

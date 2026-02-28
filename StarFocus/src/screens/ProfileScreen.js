@@ -18,7 +18,7 @@ import { supabase } from '../lib/supabase';
 import { getProfileStats, getStreakData } from '../services/sessionStorage';
 
 export default function ProfileScreen() {
-    const [leaderboardOptIn, setLeaderboardOptIn] = useState(true);
+    const [leaderboardOptIn, setLeaderboardOptIn] = useState(false);
     const [user, setUser] = useState(null);
     const [signingOut, setSigningOut] = useState(false);
     const [stats, setStats] = useState({
@@ -72,9 +72,34 @@ export default function ProfileScreen() {
                     email: user.email || '',
                     avatar: user.user_metadata?.avatar_url || null,
                 });
+                // Load leaderboard opt-in from DB
+                const { data: userData } = await supabase
+                    .from('users')
+                    .select('leaderboard_opt_in')
+                    .eq('auth_id', user.id)
+                    .single();
+                if (userData) {
+                    setLeaderboardOptIn(userData.leaderboard_opt_in ?? false);
+                }
             }
         } catch (error) {
             console.error('Failed to load user:', error);
+        }
+    };
+
+    const handleLeaderboardToggle = async (value) => {
+        setLeaderboardOptIn(value);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase
+                    .from('users')
+                    .update({ leaderboard_opt_in: value })
+                    .eq('auth_id', user.id);
+            }
+        } catch (error) {
+            console.error('Failed to update leaderboard opt-in:', error);
+            setLeaderboardOptIn(!value); // revert on failure
         }
     };
 
@@ -187,7 +212,7 @@ export default function ProfileScreen() {
                         </View>
                         <Switch
                             value={leaderboardOptIn}
-                            onValueChange={setLeaderboardOptIn}
+                            onValueChange={handleLeaderboardToggle}
                             trackColor={{ false: Colors.glass.highlight, true: Colors.accent.blue }}
                             thumbColor={Colors.text.primary}
                         />

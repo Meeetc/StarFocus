@@ -72,4 +72,21 @@ export async function updateTaskCompletion(taskId, completionPercent) {
     }
 }
 
-export default { getTasks, saveTask, deleteTask, updateTaskCompletion };
+/**
+ * Update an existing task with partial fields.
+ * @param {string} taskId
+ * @param {Object} updates - Partial task fields to update
+ */
+export async function updateTask(taskId, updates) {
+    try {
+        const tasks = await getTasks();
+        const updated = tasks.map(t =>
+            t.id === taskId ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t
+        );
+        await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(updated));
+    } catch (error) {
+        console.error('Failed to update task:', error);
+    }
+}
+
+export default { getTasks, saveTask, deleteTask, updateTaskCompletion, updateTask };

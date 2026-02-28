@@ -74,7 +74,6 @@ export async function getSessionsByDay(days = 7) {
     const scores = [];
     const minutes = [];
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const dayShort = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
     for (let i = days - 1; i >= 0; i--) {
         const date = new Date(now);
@@ -94,13 +93,7 @@ export async function getSessionsByDay(days = 7) {
         minutes.push(daySessions.reduce((sum, s) => sum + (s.deepWorkMinutes || 0), 0));
     }
 
-    return {
-        labels, scores, minutes, dayShort: labels.map((_, i) => {
-            const date = new Date(now);
-            date.setDate(date.getDate() - (days - 1 - i));
-            return dayShort[date.getDay()];
-        })
-    };
+    return { labels, scores, minutes };
 }
 
 /**

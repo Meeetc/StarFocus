@@ -15,6 +15,7 @@ import { calculateFocusScore } from '../services/focusScore';
 import { vibrateDeterrent, vibrateSuccess } from '../native/Vibration';
 import { showOverlay } from '../native/Overlay';
 import { saveSession, getStreakData, saveStreakData } from '../services/sessionStorage';
+import { updateStreak } from '../services/streaks';
 
 const DURATION_OPTIONS = [15, 25, 45, 60];
 
@@ -99,40 +100,10 @@ export default function FocusSprintScreen({ route, navigation }) {
                 adjustedScore: result.adjustedScore,
             });
 
-            // ── Update streak ──
-            const streak = await getStreakData();
-            const todayStr = now.toISOString().split('T')[0];
-
-            if (streak.lastFocusDate === todayStr) {
-                // Already focused today, no streak change
-            } else {
-                const yesterday = new Date(now);
-                yesterday.setDate(yesterday.getDate() - 1);
-                const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-                if (streak.lastFocusDate === yesterdayStr) {
-                    // Consecutive day — extend streak
-                    streak.currentStreak += 1;
-                } else if (streak.lastFocusDate) {
-                    // Missed a day — reset streak
-                    streak.currentStreak = 1;
-                } else {
-                    // First ever session
-                    streak.currentStreak = 1;
-                }
-
-                if (streak.currentStreak > streak.longestStreak) {
-                    streak.longestStreak = streak.currentStreak;
-                }
-
-                // Award freeze token at 7-day milestones
-                if (streak.currentStreak > 0 && streak.currentStreak % 7 === 0) {
-                    streak.freezeTokens = (streak.freezeTokens || 0) + 1;
-                }
-
-                streak.lastFocusDate = todayStr;
-                await saveStreakData(streak);
-            }
+            // ── Update streak via streaks.js (30-min daily threshold) ──
+            const currentStreak = await getStreakData();
+            const updatedStreak = updateStreak(currentStreak, deepWorkMins, 30);
+            await saveStreakData(updatedStreak);
         } catch (error) {
             console.error('Failed to save session:', error);
         }
@@ -317,15 +288,23 @@ export default function FocusSprintScreen({ route, navigation }) {
                     )}
                 </View>
 
-                {/* Simulate buttons (dev only — in production, native module handles this) */}
+                {/* Interaction tracking — triggers interventions */}
                 {isRunning && (
                     <View style={styles.simRow}>
-                        <TouchableOpacity style={styles.simButton} onPress={simulateAppSwitch}>
-                            <Text style={styles.simText}>📱 Sim Switch</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.simButton} onPress={simulateImpulseOpen}>
-                            <Text style={styles.simText}>⚡ Sim Impulse</Text>
-                        </TouchableOpacity>
+                        <View style={styles.simGroup}>
+                            <TouchableOpacity style={styles.simButton} onPress={simulateAppSwitch}>
+                                <Text style={styles.simText}>📱 App Switch</Text>
+                                <Text style={styles.simCount}>{appSwitches}×</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.simHint}>Left the app</Text>
+                        </View>
+                        <View style={styles.simGroup}>
+                            <TouchableOpacity style={[styles.simButton, styles.impulseButton]} onPress={simulateImpulseOpen}>
+                                <Text style={styles.simText}>🎯 Impulse Open</Text>
+                                <Text style={styles.simCount}>{impulseOpens}×</Text>
+                            </TouchableOpacity>
+                            <Text style={styles.simHint}>Opened distracting app</Text>
+                        </View>
                     </View>
                 )}
             </View>
@@ -502,8 +481,30 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: Colors.glass.border,
     },
+    impulseButton: {
+        borderColor: Colors.accent.orange,
+    },
     simText: {
         ...Typography.caption,
         color: Colors.text.muted,
+    },
+    simCount: {
+        ...Typography.caption,
+        color: Colors.accent.orange,
+        fontWeight: '700',
+        marginTop: 2,
+    },
+    simGroup: {
+        flex: 1,
+        alignItems: 'center',
+        gap: 4,
+    },
+    simHint: {
+        ...Typography.label,
+        color: Colors.text.muted,
+        fontSize: 9,
+        textAlign: 'center',
+        textTransform: 'none',
+        letterSpacing: 0,
     },
 });

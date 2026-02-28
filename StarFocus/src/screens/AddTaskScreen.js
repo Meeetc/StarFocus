@@ -92,7 +92,6 @@ export default function AddTaskScreen({ navigation }) {
                 category,
                 priorityScore: priority,
                 completionPercent: completion,
-                deadline: deadline.toISOString(),
                 dueDate: deadline.toISOString(),
                 source: 'manual',
             });

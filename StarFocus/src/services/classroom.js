@@ -42,28 +42,34 @@ export async function fetchCourseWork(accessToken, courseId) {
 }
 
 /**
- * Fetch student submissions for a specific coursework item.
+ * Fetch ALL student submissions for a course in a single API call.
+ * Uses courseWorkId='-' which is the Classroom API batch wildcard.
+ * Fixes the previous N+1 pattern (one request per assignment).
  * @param {string} accessToken
  * @param {string} courseId
- * @param {string} courseWorkId
- * @returns {Array} Array of submission objects
+ * @returns {Object} Map of courseWorkId -> submission state
  */
-export async function fetchSubmissions(accessToken, courseId, courseWorkId) {
+export async function fetchAllSubmissionsForCourse(accessToken, courseId) {
     try {
         const response = await fetch(
-            `${CLASSROOM_BASE_URL}/courses/${courseId}/courseWork/${courseWorkId}/studentSubmissions`,
+            `${CLASSROOM_BASE_URL}/courses/${courseId}/courseWork/-/studentSubmissions?states=TURNED_IN`,
             { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         const data = await response.json();
-        return data.studentSubmissions || [];
+        const submissionMap = {};
+        for (const sub of data.studentSubmissions || []) {
+            submissionMap[sub.courseWorkId] = sub.state;
+        }
+        return submissionMap;
     } catch (error) {
-        console.error(`Failed to fetch submissions:`, error);
-        return [];
+        console.error(`Failed to batch-fetch submissions for course ${courseId}:`, error);
+        return {};
     }
 }
 
 /**
  * Full sync: Fetch all courses, their coursework, and submissions.
+ * Uses a single batch submission fetch per course (previously N+1 calls).
  * Transforms Classroom API data into StarFocus task format.
  * @param {string} accessToken
  * @returns {Array} Array of StarFocus-formatted task objects
@@ -73,7 +79,11 @@ export async function fullSync(accessToken) {
     const tasks = [];
 
     for (const course of courses) {
-        const courseWork = await fetchCourseWork(accessToken, course.id);
+        // Fetch all coursework AND all submissions in parallel — 2 calls per course max
+        const [courseWork, submissionMap] = await Promise.all([
+            fetchCourseWork(accessToken, course.id),
+            fetchAllSubmissionsForCourse(accessToken, course.id),
+        ]);
 
         for (const work of courseWork) {
             // Build due date from Classroom's dueDate/dueTime format
@@ -84,13 +94,8 @@ export async function fullSync(accessToken) {
                 dueDate = new Date(year, month - 1, day, time.hours || 23, time.minutes || 59).toISOString();
             }
 
-            // Determine work type
             const workType = work.workType || 'ASSIGNMENT';
-
-            // Fetch submission status
-            const submissions = await fetchSubmissions(accessToken, course.id, work.id);
-            const submission = submissions[0]; // User's submission
-            const submissionStatus = submission?.state || 'NEW';
+            const submissionStatus = submissionMap[work.id] || 'NEW';
 
             tasks.push({
                 id: work.id,
@@ -114,6 +119,6 @@ export async function fullSync(accessToken) {
 export default {
     fetchCourses,
     fetchCourseWork,
-    fetchSubmissions,
+    fetchAllSubmissionsForCourse,
     fullSync,
 };

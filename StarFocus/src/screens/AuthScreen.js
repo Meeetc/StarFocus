@@ -1,5 +1,5 @@
-// AuthScreen — Real Google Sign-In experience
-import React, { useState, useEffect } from 'react';
+// AuthScreen — Google Sign-In + Supabase Auth
+import React, { useState } from 'react';
 import {
     View,
     Text,
@@ -11,7 +11,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { supabase } from '../lib/supabase';
-import { CONFIG } from '../lib/config';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../theme';
 import GlassCard from '../components/GlassCard';
 
@@ -22,49 +21,41 @@ const FEATURES = [
     { emoji: '🏆', title: 'Compete & Grow', desc: 'Leaderboards, streaks, and badges' },
 ];
 
-export default function AuthScreen({ onSignIn }) {
+export default function AuthScreen() {
     const [loading, setLoading] = useState(false);
-
-    useEffect(() => {
-        GoogleSignin.configure({
-            webClientId: CONFIG.GOOGLE_WEB_CLIENT_ID,
-            offlineAccess: true,
-            forceCodeForRefreshToken: true,
-            scopes: [
-                'https://www.googleapis.com/auth/classroom.courses.readonly',
-                'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
-                'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
-            ],
-        });
-    }, []);
 
     const handleSignIn = async () => {
         setLoading(true);
         try {
-            await GoogleSignin.hasPlayServices();
+            await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+            // Sign out first to force the account picker (prevents stuck loop)
+            try { await GoogleSignin.signOut(); } catch (_) { }
+
             const userInfo = await GoogleSignin.signIn();
+            const idToken = userInfo?.data?.idToken ?? userInfo?.idToken;
 
-            if (userInfo.data?.idToken) {
-                const { data, error } = await supabase.auth.signInWithIdToken({
-                    provider: 'google',
-                    token: userInfo.data.idToken,
-                });
-
-                if (error) throw error;
-                onSignIn?.();
-            } else {
-                throw new Error('No ID token returned from Google');
+            if (!idToken) {
+                throw new Error('No ID token returned from Google Sign-In.');
             }
+
+            const { error } = await supabase.auth.signInWithIdToken({
+                provider: 'google',
+                token: idToken,
+            });
+
+            if (error) throw error;
+            // App.js onAuthStateChange handles navigation automatically
+
         } catch (error) {
-            console.error('Sign In Error:', error);
             if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-                // User cancelled
+                // User cancelled — silently ignore
             } else if (error.code === statusCodes.IN_PROGRESS) {
-                Alert.alert('In Progress', 'Sign-in is already in progress.');
+                Alert.alert('Please wait', 'Sign-in is already in progress.');
             } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-                Alert.alert('Play Services', 'Google Play Services not available.');
+                Alert.alert('Google Play Services', 'Please update Google Play Services and try again.');
             } else {
-                Alert.alert('Auth Error', error.message || 'An unexpected error occurred during sign-in.');
+                Alert.alert('Sign-In Failed', error.message || 'An unexpected error occurred. Please try again.');
             }
         } finally {
             setLoading(false);
@@ -120,65 +111,19 @@ export default function AuthScreen({ onSignIn }) {
 }
 
 const styles = StyleSheet.create({
-    safeArea: {
-        flex: 1,
-        backgroundColor: Colors.bg.primary,
-    },
-    container: {
-        flex: 1,
-        justifyContent: 'space-between',
-        padding: Spacing.lg,
-    },
-    brand: {
-        alignItems: 'center',
-        marginTop: Spacing.xxl,
-    },
-    emoji: {
-        fontSize: 56,
-        marginBottom: Spacing.sm,
-    },
-    appName: {
-        ...Typography.h1,
-        color: Colors.text.primary,
-        fontSize: 36,
-        letterSpacing: -1,
-    },
-    tagline: {
-        ...Typography.body,
-        color: Colors.text.secondary,
-        textAlign: 'center',
-        marginTop: Spacing.sm,
-        lineHeight: 24,
-    },
-    features: {
-        gap: Spacing.sm,
-    },
-    featureCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: Spacing.md,
-    },
-    featureEmoji: {
-        fontSize: 28,
-        marginRight: Spacing.md,
-    },
-    featureContent: {
-        flex: 1,
-    },
-    featureTitle: {
-        ...Typography.bodyBold,
-        color: Colors.text.primary,
-    },
-    featureDesc: {
-        ...Typography.caption,
-        color: Colors.text.muted,
-        marginTop: 2,
-    },
-    authSection: {
-        alignItems: 'center',
-        marginBottom: Spacing.md,
-    },
+    safeArea: { flex: 1, backgroundColor: Colors.bg.primary },
+    container: { flex: 1, justifyContent: 'space-between', padding: Spacing.lg },
+    brand: { alignItems: 'center', marginTop: Spacing.xxl },
+    emoji: { fontSize: 56, marginBottom: Spacing.sm },
+    appName: { ...Typography.h1, color: Colors.text.primary, fontSize: 36, letterSpacing: -1 },
+    tagline: { ...Typography.body, color: Colors.text.secondary, textAlign: 'center', marginTop: Spacing.sm, lineHeight: 24 },
+    features: { gap: Spacing.sm },
+    featureCard: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: Spacing.md },
+    featureEmoji: { fontSize: 28, marginRight: Spacing.md },
+    featureContent: { flex: 1 },
+    featureTitle: { ...Typography.bodyBold, color: Colors.text.primary },
+    featureDesc: { ...Typography.caption, color: Colors.text.muted, marginTop: 2 },
+    authSection: { alignItems: 'center', marginBottom: Spacing.md },
     signInButton: {
         backgroundColor: Colors.accent.blue,
         paddingVertical: Spacing.md,
@@ -187,15 +132,6 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
     },
-    signInText: {
-        ...Typography.bodyBold,
-        color: Colors.text.primary,
-        fontSize: 16,
-    },
-    disclaimer: {
-        ...Typography.caption,
-        color: Colors.text.muted,
-        marginTop: Spacing.md,
-        textAlign: 'center',
-    },
+    signInText: { ...Typography.bodyBold, color: Colors.text.primary, fontSize: 16 },
+    disclaimer: { ...Typography.caption, color: Colors.text.muted, marginTop: Spacing.md, textAlign: 'center' },
 });

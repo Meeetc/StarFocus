@@ -1,6 +1,6 @@
-// TaskCard — Priority-aware task card with calm, minimal design
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+// TaskCard — Priority-aware task card with completion slider
+import React, { useRef, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, PanResponder } from 'react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../theme';
 
 const ZONE_CONFIG = {
@@ -11,6 +11,41 @@ const ZONE_CONFIG = {
 
 export default function TaskCard({ task, onStartFocus, onPress, onDelete, onUpdateCompletion }) {
     const zone = ZONE_CONFIG[task.priorityZone] || ZONE_CONFIG.green;
+
+    // Local state for immediate slider feedback
+    const [localCompletion, setLocalCompletion] = useState(task.completionPercent || 0);
+    const trackWidthRef = useRef(0);
+    const isDragging = useRef(false);
+
+    // Sync if parent updates the value externally
+    useEffect(() => {
+        if (!isDragging.current) {
+            setLocalCompletion(task.completionPercent || 0);
+        }
+    }, [task.completionPercent]);
+
+    const calcPct = (x) => Math.max(0, Math.min(100, Math.round((x / (trackWidthRef.current || 1)) * 100)));
+
+    const panResponder = useRef(PanResponder.create({
+        onStartShouldSetPanResponder: () => !!onUpdateCompletion,
+        onMoveShouldSetPanResponder: () => !!onUpdateCompletion,
+        onPanResponderGrant: (evt) => {
+            isDragging.current = true;
+            setLocalCompletion(calcPct(evt.nativeEvent.locationX));
+        },
+        onPanResponderMove: (evt) => {
+            setLocalCompletion(calcPct(evt.nativeEvent.locationX));
+        },
+        onPanResponderRelease: (evt) => {
+            const pct = calcPct(evt.nativeEvent.locationX);
+            setLocalCompletion(pct);
+            onUpdateCompletion?.(task.taskId || task.id, pct);
+            isDragging.current = false;
+        },
+        onPanResponderTerminate: () => {
+            isDragging.current = false;
+        },
+    })).current;
 
     const handleLongPress = () => {
         if (!onDelete) return;
@@ -24,18 +59,14 @@ export default function TaskCard({ task, onStartFocus, onPress, onDelete, onUpda
         );
     };
 
-    const handleCompletionTap = () => {
-        if (!onUpdateCompletion) return;
-        const current = task.completionPercent || 0;
-        const next = current >= 100 ? 0 : Math.min(current + 25, 100);
-        onUpdateCompletion(task.taskId || task.id, next);
-    };
-
-    const timeLabel = task.timeRemaining != null
-        ? task.timeRemaining < 1 ? 'Due now'
-            : task.timeRemaining < 24 ? `${Math.round(task.timeRemaining)}h left`
-                : `${Math.round(task.timeRemaining / 24)}d left`
-        : null;
+    const hoursLeft = task.timeRemaining;
+    let timeLabel = null;
+    if (hoursLeft != null) {
+        if (hoursLeft <= 0) timeLabel = '⚠️ Missed';
+        else if (hoursLeft < 1) timeLabel = 'Due < 1h';
+        else if (hoursLeft < 24) timeLabel = `${Math.round(hoursLeft)}h left`;
+        else timeLabel = `${Math.round(hoursLeft / 24)}d left`;
+    }
 
     return (
         <TouchableOpacity
@@ -61,44 +92,46 @@ export default function TaskCard({ task, onStartFocus, onPress, onDelete, onUpda
                     <Text style={styles.courseName} numberOfLines={1}>{task.courseName}</Text>
                 )}
 
-                {/* Bottom row: Time + Completion + Focus CTA */}
-                <View style={styles.bottomRow}>
-                    <View style={styles.metaRow}>
-                        {timeLabel && (
-                            <Text style={[styles.metaText, { color: zone.accent }]}>{timeLabel}</Text>
-                        )}
-                        <TouchableOpacity onPress={handleCompletionTap} activeOpacity={0.7}>
-                            <Text style={[styles.metaText, styles.completionText]}>
-                                {task.completionPercent}% done ✏️
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-
+                {/* Meta row */}
+                <View style={styles.metaRow}>
+                    {timeLabel && (
+                        <Text style={[
+                            styles.metaText,
+                            { color: hoursLeft <= 0 ? Colors.accent.red : zone.accent }
+                        ]}>
+                            {timeLabel}
+                        </Text>
+                    )}
+                    <Text style={[styles.metaText, styles.pctLabel]}>{localCompletion}%</Text>
                     {onStartFocus && (
                         <TouchableOpacity
                             style={[styles.focusButton, { backgroundColor: zone.bg }]}
                             onPress={() => onStartFocus(task)}
                             activeOpacity={0.8}
                         >
-                            <Text style={[styles.focusButtonText, { color: zone.accent }]}>
-                                ⚡ Focus
-                            </Text>
+                            <Text style={[styles.focusButtonText, { color: zone.accent }]}>⚡ Focus</Text>
                         </TouchableOpacity>
                     )}
                 </View>
 
-                {/* Progress bar */}
-                <View style={styles.progressTrack}>
-                    <View
-                        style={[
-                            styles.progressFill,
-                            {
-                                width: `${task.completionPercent}%`,
-                                backgroundColor: zone.accent,
-                            },
-                        ]}
-                    />
+                {/* Draggable completion slider */}
+                <View
+                    {...panResponder.panHandlers}
+                    onLayout={(e) => { trackWidthRef.current = e.nativeEvent.layout.width; }}
+                    style={styles.sliderTrack}
+                    hitSlop={{ top: 10, bottom: 10 }}
+                >
+                    <View style={[styles.sliderFill, { width: `${localCompletion}%`, backgroundColor: zone.accent }]} />
+                    {/* Thumb */}
+                    <View style={[styles.sliderThumb, {
+                        left: `${localCompletion}%`,
+                        backgroundColor: zone.accent,
+                        transform: [{ translateX: -6 }],
+                    }]} />
                 </View>
+                {onUpdateCompletion && (
+                    <Text style={styles.sliderHint}>← drag to update progress →</Text>
+                )}
             </View>
         </TouchableOpacity>
     );
@@ -114,73 +147,52 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         marginBottom: Spacing.sm,
     },
-    priorityIndicator: {
-        width: 4,
-    },
-    content: {
-        flex: 1,
-        padding: Spacing.md,
-    },
+    priorityIndicator: { width: 4 },
+    content: { flex: 1, padding: Spacing.md },
     topRow: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
         gap: Spacing.sm,
     },
-    title: {
-        ...Typography.bodyBold,
-        color: Colors.text.primary,
-        flex: 1,
-    },
-    zoneBadge: {
-        paddingHorizontal: Spacing.sm,
-        paddingVertical: 3,
-        borderRadius: BorderRadius.sm,
-    },
-    zoneText: {
-        fontSize: 11,
-        fontWeight: '600',
-    },
-    courseName: {
-        ...Typography.caption,
-        color: Colors.text.muted,
-        marginTop: 4,
-    },
-    bottomRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: Spacing.sm,
-    },
+    title: { ...Typography.bodyBold, color: Colors.text.primary, flex: 1 },
+    zoneBadge: { paddingHorizontal: Spacing.sm, paddingVertical: 3, borderRadius: BorderRadius.sm },
+    zoneText: { fontSize: 11, fontWeight: '600' },
+    courseName: { ...Typography.caption, color: Colors.text.muted, marginTop: 4 },
     metaRow: {
         flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: Spacing.sm,
         gap: Spacing.md,
     },
-    metaText: {
-        ...Typography.caption,
-        color: Colors.text.secondary,
-    },
-    completionText: {
-        textDecorationLine: 'underline',
-    },
-    focusButton: {
-        paddingHorizontal: Spacing.md,
-        paddingVertical: 6,
-        borderRadius: BorderRadius.full,
-    },
-    focusButtonText: {
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    progressTrack: {
-        height: 3,
+    metaText: { ...Typography.caption, color: Colors.text.secondary },
+    pctLabel: { flex: 1, fontWeight: '600', color: Colors.text.primary },
+    focusButton: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full },
+    focusButtonText: { fontSize: 12, fontWeight: '700' },
+    sliderTrack: {
+        height: 8,
         backgroundColor: Colors.glass.highlight,
-        borderRadius: 2,
+        borderRadius: 4,
         marginTop: Spacing.sm,
-        overflow: 'hidden',
+        overflow: 'visible',
     },
-    progressFill: {
-        height: '100%',
-        borderRadius: 2,
+    sliderFill: { height: '100%', borderRadius: 4 },
+    sliderThumb: {
+        position: 'absolute',
+        top: -4,
+        width: 16,
+        height: 16,
+        borderRadius: 8,
+        borderWidth: 2,
+        borderColor: Colors.bg.primary,
+    },
+    sliderHint: {
+        ...Typography.label,
+        color: Colors.text.muted,
+        textAlign: 'center',
+        marginTop: 6,
+        textTransform: 'none',
+        letterSpacing: 0,
+        fontSize: 10,
     },
 });

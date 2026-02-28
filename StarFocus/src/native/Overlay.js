@@ -1,41 +1,69 @@
-// JavaScript Bridge — Overlay Native Module
-import { NativeModules, Platform } from 'react-native';
+// Overlay Module — In-app Alert-based deterrent overlays
+// Replaces the bare NativeModule stub that required SYSTEM_ALERT_WINDOW permission.
+// Uses React Native Alert for immediate compatibility without any native Kotlin code.
+import { Alert } from 'react-native';
+import { vibrateDeterrent } from './Vibration';
 
-const { OverlayModule } = NativeModules;
+const LEVEL_CONFIG = {
+    breathing: {
+        title: '🧘 Take a Breath',
+        buttonText: 'Back to Work',
+    },
+    greyscale: {
+        title: '⚠️ Getting Distracted',
+        buttonText: 'Refocus Now',
+    },
+    vibration: {
+        title: '🚨 High Distraction!',
+        buttonText: 'I\'ll Refocus',
+    },
+};
+
+let _overlayVisible = false;
 
 /**
  * Check if overlay permission is granted.
+ * Always true for the Alert-based implementation.
  * @returns {Promise<boolean>}
  */
 export async function hasOverlayPermission() {
-    if (Platform.OS !== 'android') return false;
-    return await OverlayModule.hasPermission();
+    return true; // Alert needs no special permission
 }
 
 /**
- * Open system settings to request overlay permission.
+ * No-op: No system permission needed for Alert overlays.
  */
 export function requestOverlayPermission() {
-    if (Platform.OS !== 'android') return;
-    OverlayModule.requestPermission();
+    // Nothing needed
 }
 
 /**
- * Show a deterrent overlay on screen.
+ * Show a deterrent overlay as a blocking Alert.
  * @param {string} message - Message to display
  * @param {'breathing'|'greyscale'|'vibration'} level - Intervention level
  */
 export function showOverlay(message, level = 'breathing') {
-    if (Platform.OS !== 'android' || !OverlayModule) return;
-    OverlayModule.showOverlay(message, level);
+    if (_overlayVisible) return; // Prevent stacking alerts
+    const config = LEVEL_CONFIG[level] || LEVEL_CONFIG.breathing;
+
+    if (level === 'vibration') {
+        vibrateDeterrent();
+    }
+
+    _overlayVisible = true;
+    Alert.alert(
+        config.title,
+        message,
+        [{ text: config.buttonText, onPress: () => { _overlayVisible = false; } }],
+        { cancelable: false }
+    );
 }
 
 /**
- * Hide the deterrent overlay.
+ * Dismiss the overlay (no-op for Alert — user must tap the button).
  */
 export function hideOverlay() {
-    if (Platform.OS !== 'android' || !OverlayModule) return;
-    OverlayModule.hideOverlay();
+    _overlayVisible = false;
 }
 
 /**
@@ -43,8 +71,7 @@ export function hideOverlay() {
  * @returns {Promise<boolean>}
  */
 export async function isOverlayVisible() {
-    if (Platform.OS !== 'android') return false;
-    return await OverlayModule.isVisible();
+    return _overlayVisible;
 }
 
 export default {
