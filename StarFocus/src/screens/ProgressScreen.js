@@ -8,6 +8,7 @@ import {
     Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { LineChart, BarChart, ContributionGraph } from 'react-native-chart-kit';
 import { Colors, Typography, Spacing, BorderRadius } from '../theme';
@@ -17,8 +18,8 @@ import { getSessionsByDay, getHeatmapData, getProfileStats } from '../services/s
 const screenWidth = Dimensions.get('window').width - Spacing.md * 2;
 
 const chartConfig = {
-    backgroundGradientFrom: Colors.bg.card,
-    backgroundGradientTo: Colors.bg.card,
+    backgroundGradientFrom: Colors.bg.tertiary,
+    backgroundGradientTo: Colors.bg.tertiary,
     color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
     strokeWidth: 2,
     barPercentage: 0.6,
@@ -51,13 +52,12 @@ export default function ProgressScreen() {
         }
     };
 
-    // Ensure we always have valid chart data
     const hasData = weeklyData && weeklyData.scores.some(s => s > 0);
 
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <Text style={styles.header}>📊 Your Progress</Text>
+                <Text style={styles.header}>Your Progress</Text>
 
                 {/* Summary cards */}
                 <View style={styles.summaryRow}>
@@ -76,7 +76,10 @@ export default function ProgressScreen() {
                 </View>
 
                 {/* Weekly Focus Score */}
-                <Text style={styles.sectionTitle}>📈 Weekly Focus Score</Text>
+                <View style={styles.sectionHeader}>
+                    <MaterialCommunityIcons name="chart-line" size={18} color={Colors.accent.blue} />
+                    <Text style={styles.sectionTitle}>Weekly Focus Score</Text>
+                </View>
                 <GlassCard>
                     {hasData ? (
                         <LineChart
@@ -92,14 +95,17 @@ export default function ProgressScreen() {
                         />
                     ) : (
                         <View style={styles.emptyChart}>
-                            <Text style={styles.emptyEmoji}>🎯</Text>
-                            <Text style={styles.emptyText}>Complete a focus sprint to see your score chart!</Text>
+                            <MaterialCommunityIcons name="target" size={36} color={Colors.text.muted} />
+                            <Text style={styles.emptyText}>Complete a focus sprint to see your score chart</Text>
                         </View>
                     )}
                 </GlassCard>
 
                 {/* Daily Focus Minutes */}
-                <Text style={styles.sectionTitle}>⏱️ Daily Focus Minutes</Text>
+                <View style={styles.sectionHeader}>
+                    <MaterialCommunityIcons name="clock-outline" size={18} color={Colors.accent.green} />
+                    <Text style={styles.sectionTitle}>Daily Focus Minutes</Text>
+                </View>
                 <GlassCard>
                     {hasData ? (
                         <BarChart
@@ -117,14 +123,17 @@ export default function ProgressScreen() {
                         />
                     ) : (
                         <View style={styles.emptyChart}>
-                            <Text style={styles.emptyEmoji}>⏱️</Text>
-                            <Text style={styles.emptyText}>Your daily focus minutes will appear here after sessions.</Text>
+                            <MaterialCommunityIcons name="clock-outline" size={36} color={Colors.text.muted} />
+                            <Text style={styles.emptyText}>Your daily focus minutes will appear here after sessions</Text>
                         </View>
                     )}
                 </GlassCard>
 
                 {/* Activity Heatmap */}
-                <Text style={styles.sectionTitle}>🗓️ Activity Heatmap</Text>
+                <View style={styles.sectionHeader}>
+                    <MaterialCommunityIcons name="calendar-month-outline" size={18} color={Colors.accent.purple} />
+                    <Text style={styles.sectionTitle}>Activity Heatmap</Text>
+                </View>
                 <GlassCard>
                     {heatmap.length > 0 ? (
                         <ContributionGraph
@@ -141,13 +150,13 @@ export default function ProgressScreen() {
                         />
                     ) : (
                         <View style={styles.emptyChart}>
-                            <Text style={styles.emptyEmoji}>🗓️</Text>
-                            <Text style={styles.emptyText}>Your focus activity heatmap will build up over time.</Text>
+                            <MaterialCommunityIcons name="calendar-month-outline" size={36} color={Colors.text.muted} />
+                            <Text style={styles.emptyText}>Your focus activity heatmap will build up over time</Text>
                         </View>
                     )}
                 </GlassCard>
 
-                <View style={{ height: 100 }} />
+                <View style={{ height: 120 }} />
             </ScrollView>
         </SafeAreaView>
     );
@@ -158,13 +167,13 @@ const styles = StyleSheet.create({
     container: { flex: 1 },
     content: { padding: Spacing.md },
     header: { ...Typography.h1, color: Colors.text.primary, marginBottom: Spacing.lg },
-    sectionTitle: { ...Typography.h3, color: Colors.text.primary, marginBottom: Spacing.sm, marginTop: Spacing.md },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm, marginTop: Spacing.md },
+    sectionTitle: { ...Typography.h3, color: Colors.text.primary },
     summaryRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
     summaryCard: { flex: 1, alignItems: 'center', paddingVertical: Spacing.sm },
     summaryValue: { ...Typography.metric },
     summaryLabel: { ...Typography.caption, color: Colors.text.muted, marginTop: 2 },
     chart: { borderRadius: BorderRadius.md, marginVertical: Spacing.xs },
-    emptyChart: { alignItems: 'center', paddingVertical: Spacing.xl },
-    emptyEmoji: { fontSize: 40, marginBottom: Spacing.sm },
+    emptyChart: { alignItems: 'center', paddingVertical: Spacing.xl, gap: Spacing.sm },
     emptyText: { ...Typography.body, color: Colors.text.muted, textAlign: 'center', paddingHorizontal: Spacing.md },
 });

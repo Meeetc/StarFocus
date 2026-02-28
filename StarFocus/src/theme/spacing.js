@@ -1,5 +1,5 @@
 // StarFocus Design System — Spacing & Layout
-// 8px grid system with generous spacing for clarity
+// 8px grid system, premium radii, deep floating shadows
 
 export const Spacing = {
     xs: 4,
@@ -13,39 +13,40 @@ export const Spacing = {
 export const BorderRadius = {
     sm: 8,
     md: 12,
-    lg: 16,        // Cards (16–20px per guidelines)
-    xl: 20,        // Larger cards
+    lg: 16,
+    xl: 20,        // Standard cards
+    xxl: 24,       // Hero cards & modals
     full: 999,
 };
 
 export const Shadows = {
-    // Soft shadow depth for floating cards
+    // Deep floating shadow for glass cards
     card: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.25,
-        shadowRadius: 30,
-        elevation: 8,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.30,
+        shadowRadius: 32,
+        elevation: 10,
     },
-    // Subtle lift shadow
+    // Subtle lift
     subtle: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 4,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.20,
+        shadowRadius: 16,
+        elevation: 6,
     },
-    // Accent glow — use sparingly for focus elements
+    // Accent glow
     glow: (color = '#3B82F6') => ({
         shadowColor: color,
         shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 10,
+        shadowOpacity: 0.25,
+        shadowRadius: 24,
+        elevation: 12,
     }),
 };
 
-// Animation durations per guidelines (200–350ms)
+// Animation durations
 export const Motion = {
     fast: 200,
     normal: 280,

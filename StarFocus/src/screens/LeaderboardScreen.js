@@ -5,13 +5,14 @@ import {
     ActivityIndicator, Clipboard, Alert, Modal, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Typography, Spacing, BorderRadius } from '../theme';
 import GlassCard from '../components/GlassCard';
 import { supabase } from '../lib/supabase';
 
 function generateJoinCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusable chars
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
@@ -30,7 +31,6 @@ export default function LeaderboardScreen() {
     const [loading, setLoading] = useState(true);
     const [myUserId, setMyUserId] = useState(null);
 
-    // Modals
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showJoinModal, setShowJoinModal] = useState(false);
     const [groupNameInput, setGroupNameInput] = useState('');
@@ -44,22 +44,17 @@ export default function LeaderboardScreen() {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
-
             const { data: userData } = await supabase
                 .from('users').select('id').eq('auth_id', user.id).single();
             const myId = userData?.id;
             setMyUserId(myId);
-
             const weekStart = getThisMonday();
-
-            // Global leaderboard
             const { data: globalData } = await supabase
                 .from('leaderboard_snapshots')
                 .select('user_id, weekly_score, streak_length, users!inner(display_name)')
                 .eq('week_start', weekStart)
                 .order('weekly_score', { ascending: false })
                 .limit(50);
-
             setGlobalEntries((globalData || []).map((e, i) => ({
                 rank: i + 1,
                 userId: e.user_id,
@@ -68,8 +63,6 @@ export default function LeaderboardScreen() {
                 streakLength: e.streak_length || 0,
                 isCurrentUser: e.user_id === myId,
             })));
-
-            // Study group
             if (myId) await loadGroupData(myId, weekStart);
         } catch (err) {
             console.error('Leaderboard load error:', err);
@@ -84,15 +77,12 @@ export default function LeaderboardScreen() {
             .select('group_id, study_groups(id, name, join_code)')
             .eq('user_id', myId)
             .single();
-
         if (!membership?.study_groups) { setGroupData(null); return; }
-
         const group = membership.study_groups;
         const { data: members } = await supabase
             .from('group_members')
             .select('user_id, users(display_name)')
             .eq('group_id', group.id);
-
         const memberIds = members?.map(m => m.user_id) || [];
         const { data: scores } = await supabase
             .from('leaderboard_snapshots')
@@ -100,10 +90,8 @@ export default function LeaderboardScreen() {
             .eq('week_start', weekStart)
             .in('user_id', memberIds)
             .order('weekly_score', { ascending: false });
-
         const nameMap = {};
         members?.forEach(m => { nameMap[m.user_id] = m.users?.display_name || 'Anonymous'; });
-
         setGroupData({
             name: group.name,
             joinCode: group.join_code,
@@ -131,15 +119,13 @@ export default function LeaderboardScreen() {
                 .select()
                 .single();
             if (gErr) throw gErr;
-
             const { error: mErr } = await supabase
                 .from('group_members')
                 .insert({ group_id: group.id, user_id: myUserId });
             if (mErr) throw mErr;
-
             setShowCreateModal(false);
             setGroupNameInput('');
-            Alert.alert('🎉 Group Created!', `Join code: ${joinCode}\nShare this with your study partners!`);
+            Alert.alert('Group Created', `Join code: ${joinCode}\nShare this with your study partners.`);
             loadLeaderboard();
         } catch (err) {
             Alert.alert('Error', err.message || 'Failed to create group.');
@@ -160,21 +146,17 @@ export default function LeaderboardScreen() {
             if (gErr || !group) {
                 Alert.alert('Not found', 'No group found with that code. Check and try again.'); return;
             }
-
-            // Check already in a group
             const { data: existing } = await supabase
                 .from('group_members').select('id').eq('user_id', myUserId).single();
             if (existing) {
                 Alert.alert('Already in a group', 'Leave your current group first before joining another.'); return;
             }
-
             const { error: mErr } = await supabase
                 .from('group_members').insert({ group_id: group.id, user_id: myUserId });
             if (mErr) throw mErr;
-
             setShowJoinModal(false);
             setJoinCodeInput('');
-            Alert.alert('🎉 Joined!', `Welcome to "${group.name}"!`);
+            Alert.alert('Joined', `Welcome to "${group.name}".`);
             loadLeaderboard();
         } catch (err) {
             Alert.alert('Error', err.message || 'Failed to join group.');
@@ -186,14 +168,14 @@ export default function LeaderboardScreen() {
     const handleCopyCode = () => {
         if (!groupData?.joinCode) return;
         Clipboard.setString(groupData.joinCode);
-        Alert.alert('✅ Copied', `Code "${groupData.joinCode}" copied to clipboard.`);
+        Alert.alert('Copied', `Code "${groupData.joinCode}" copied to clipboard.`);
     };
 
     if (loading) {
         return (
             <View style={styles.center}>
                 <ActivityIndicator size="large" color={Colors.accent.blue} />
-                <Text style={styles.loadingText}>Loading leaderboard…</Text>
+                <Text style={styles.loadingText}>Loading leaderboard</Text>
             </View>
         );
     }
@@ -203,16 +185,18 @@ export default function LeaderboardScreen() {
     return (
         <SafeAreaView style={styles.safeArea}>
             <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-                <Text style={styles.title}>🏆 Leaderboard</Text>
-                <Text style={styles.subtitle}>This Week · Resets Monday</Text>
+                <Text style={styles.title}>Leaderboard</Text>
+                <Text style={styles.subtitle}>This Week  ·  Resets Monday</Text>
 
                 {/* Tab row */}
                 <View style={styles.tabRow}>
                     <TouchableOpacity style={[styles.tab, activeTab === 'global' && styles.tabActive]} onPress={() => setActiveTab('global')}>
-                        <Text style={[styles.tabText, activeTab === 'global' && styles.tabTextActive]}>🌍 Global</Text>
+                        <MaterialCommunityIcons name="earth" size={16} color={activeTab === 'global' ? '#fff' : Colors.text.secondary} />
+                        <Text style={[styles.tabText, activeTab === 'global' && styles.tabTextActive]}> Global</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[styles.tab, activeTab === 'group' && styles.tabActive]} onPress={() => setActiveTab('group')}>
-                        <Text style={[styles.tabText, activeTab === 'group' && styles.tabTextActive]}>👥 Group</Text>
+                        <MaterialCommunityIcons name="account-group-outline" size={16} color={activeTab === 'group' ? '#fff' : Colors.text.secondary} />
+                        <Text style={[styles.tabText, activeTab === 'group' && styles.tabTextActive]}> Group</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -224,23 +208,33 @@ export default function LeaderboardScreen() {
                                 {globalEntries.slice(0, 3).map((e, i) => (
                                     <GlassCard key={e.rank} glowColor={i === 0 ? Colors.accent.gold : null}
                                         style={[styles.podiumCard, i === 0 && styles.podiumFirst, e.isCurrentUser && styles.meCard]}>
-                                        <Text style={styles.podiumRankEmoji}>{i === 0 ? '👑' : `#${e.rank}`}</Text>
+                                        {i === 0 ? (
+                                            <MaterialCommunityIcons name="crown-outline" size={22} color={Colors.accent.gold} />
+                                        ) : (
+                                            <Text style={styles.podiumRank}>#{e.rank}</Text>
+                                        )}
                                         <Text style={styles.podiumName} numberOfLines={1}>{e.displayName}</Text>
                                         <Text style={[styles.podiumScore, i === 0 && { color: Colors.accent.gold }]}>{e.weeklyFocusScore}</Text>
-                                        <Text style={styles.podiumStreak}>🔥 {e.streakLength}d</Text>
+                                        <View style={styles.streakBadge}>
+                                            <MaterialCommunityIcons name="fire" size={12} color={Colors.accent.orange} />
+                                            <Text style={styles.podiumStreak}> {e.streakLength}d</Text>
+                                        </View>
                                     </GlassCard>
                                 ))}
                             </View>
                             {globalEntries.length > 3 && (
-                                <GlassCard style={styles.listCard}>
+                                <GlassCard style={styles.listCard} noPadding>
                                     {globalEntries.slice(3).map(e => (
                                         <View key={e.rank} style={[styles.listRow, e.isCurrentUser && styles.meRow]}>
                                             <Text style={styles.listRank}>#{e.rank}</Text>
                                             <Text style={[styles.listName, e.isCurrentUser && { color: Colors.accent.blue }]} numberOfLines={1}>
-                                                {e.displayName}{e.isCurrentUser ? ' ⭐' : ''}
+                                                {e.displayName}
                                             </Text>
                                             <Text style={styles.listScore}>{e.weeklyFocusScore}</Text>
-                                            <Text style={styles.listStreak}>🔥{e.streakLength}</Text>
+                                            <View style={styles.streakBadge}>
+                                                <MaterialCommunityIcons name="fire" size={12} color={Colors.accent.orange} />
+                                                <Text style={styles.listStreak}>{e.streakLength}</Text>
+                                            </View>
                                         </View>
                                     ))}
                                 </GlassCard>
@@ -248,8 +242,8 @@ export default function LeaderboardScreen() {
                         </>
                     ) : (
                         <GlassCard style={styles.emptyCard}>
-                            <Text style={styles.emptyEmoji}>🌱</Text>
-                            <Text style={styles.emptyText}>Complete a focus sprint to appear on the leaderboard!</Text>
+                            <MaterialCommunityIcons name="sprout-outline" size={40} color={Colors.text.muted} />
+                            <Text style={styles.emptyText}>Complete a focus sprint to appear on the leaderboard</Text>
                         </GlassCard>
                     )
                 ) : (
@@ -259,19 +253,23 @@ export default function LeaderboardScreen() {
                                 <Text style={styles.groupName}>{groupData.name}</Text>
                                 <Text style={styles.groupMeta}>{groupData.members.length} members</Text>
                                 <TouchableOpacity style={styles.codeRow} onPress={handleCopyCode}>
-                                    <Text style={styles.codeText}>🔑 {groupData.joinCode}</Text>
+                                    <MaterialCommunityIcons name="key-outline" size={14} color={Colors.accent.purple} />
+                                    <Text style={styles.codeText}> {groupData.joinCode}</Text>
                                     <Text style={styles.copyBtn}>Copy</Text>
                                 </TouchableOpacity>
                             </GlassCard>
-                            <GlassCard style={styles.listCard}>
+                            <GlassCard style={styles.listCard} noPadding>
                                 {groupData.members.map(m => (
                                     <View key={m.rank} style={[styles.listRow, m.isCurrentUser && styles.meRow]}>
                                         <Text style={styles.listRank}>#{m.rank}</Text>
                                         <Text style={[styles.listName, m.isCurrentUser && { color: Colors.accent.blue }]}>
-                                            {m.displayName}{m.isCurrentUser ? ' ⭐' : ''}
+                                            {m.displayName}
                                         </Text>
                                         <Text style={styles.listScore}>{m.weeklyFocusScore}</Text>
-                                        <Text style={styles.listStreak}>🔥{m.streakLength}</Text>
+                                        <View style={styles.streakBadge}>
+                                            <MaterialCommunityIcons name="fire" size={12} color={Colors.accent.orange} />
+                                            <Text style={styles.listStreak}>{m.streakLength}</Text>
+                                        </View>
                                     </View>
                                 ))}
                             </GlassCard>
@@ -279,22 +277,24 @@ export default function LeaderboardScreen() {
                     ) : (
                         <>
                             <GlassCard style={styles.emptyCard}>
-                                <Text style={styles.emptyEmoji}>👥</Text>
-                                <Text style={styles.emptyText}>You're not in a study group yet.</Text>
+                                <MaterialCommunityIcons name="account-group-outline" size={40} color={Colors.text.muted} />
+                                <Text style={styles.emptyText}>You're not in a study group yet</Text>
                             </GlassCard>
                             <View style={styles.groupActions}>
                                 <TouchableOpacity style={styles.actionBtn} onPress={() => setShowCreateModal(true)}>
-                                    <Text style={styles.actionBtnText}>➕ Create Group</Text>
+                                    <MaterialCommunityIcons name="plus" size={18} color="#fff" />
+                                    <Text style={styles.actionBtnText}> Create Group</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={[styles.actionBtn, styles.actionBtnSecondary]} onPress={() => setShowJoinModal(true)}>
-                                    <Text style={[styles.actionBtnText, { color: Colors.accent.blue }]}>🔑 Join with Code</Text>
+                                    <MaterialCommunityIcons name="key-outline" size={18} color={Colors.accent.blue} />
+                                    <Text style={[styles.actionBtnText, { color: Colors.accent.blue }]}> Join with Code</Text>
                                 </TouchableOpacity>
                             </View>
                         </>
                     )
                 )}
 
-                <View style={{ height: 100 }} />
+                <View style={{ height: 120 }} />
             </ScrollView>
 
             {/* Create Group Modal */}
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     title: { ...Typography.h1, color: Colors.text.primary, textAlign: 'center' },
     subtitle: { ...Typography.caption, color: Colors.text.muted, textAlign: 'center', marginBottom: Spacing.lg },
     tabRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
-    tab: { flex: 1, paddingVertical: 10, borderRadius: BorderRadius.lg, backgroundColor: Colors.glass.bg, borderWidth: 1, borderColor: Colors.glass.border, alignItems: 'center' },
+    tab: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: BorderRadius.full, backgroundColor: Colors.glass.bg, borderWidth: 1, borderColor: Colors.glass.border },
     tabActive: { backgroundColor: Colors.accent.blue, borderColor: Colors.accent.blue },
     tabText: { ...Typography.bodyBold, color: Colors.text.secondary },
     tabTextActive: { color: '#fff' },
@@ -368,31 +368,30 @@ const styles = StyleSheet.create({
     podiumCard: { flex: 1, alignItems: 'center', paddingVertical: Spacing.md },
     podiumFirst: { marginTop: -8 },
     meCard: { borderColor: Colors.accent.blue },
-    podiumRankEmoji: { fontSize: 22, marginBottom: 4 },
-    podiumName: { ...Typography.caption, color: Colors.text.primary, fontWeight: '600', marginBottom: 4 },
+    podiumRank: { ...Typography.bodyBold, color: Colors.text.muted, fontSize: 16 },
+    podiumName: { ...Typography.caption, color: Colors.text.primary, fontWeight: '600', marginTop: 4, marginBottom: 4 },
     podiumScore: { ...Typography.metric, color: Colors.text.primary },
-    podiumStreak: { ...Typography.caption, color: Colors.text.muted, marginTop: 2 },
+    streakBadge: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+    podiumStreak: { ...Typography.caption, color: Colors.text.muted },
     listCard: { padding: 0, marginBottom: Spacing.md },
     listRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.glass.border },
-    meRow: { backgroundColor: 'rgba(59,130,246,0.1)' },
+    meRow: { backgroundColor: 'rgba(59,130,246,0.08)' },
     listRank: { ...Typography.bodyBold, color: Colors.text.muted, width: 36 },
     listName: { ...Typography.body, color: Colors.text.primary, flex: 1 },
     listScore: { ...Typography.bodyBold, color: Colors.text.primary, marginRight: Spacing.sm },
-    listStreak: { ...Typography.caption, color: Colors.text.muted, width: 40, textAlign: 'right' },
-    emptyCard: { alignItems: 'center', paddingVertical: Spacing.xl, marginBottom: Spacing.md },
-    emptyEmoji: { fontSize: 40, marginBottom: Spacing.sm },
+    listStreak: { ...Typography.caption, color: Colors.text.muted },
+    emptyCard: { alignItems: 'center', paddingVertical: Spacing.xl, marginBottom: Spacing.md, gap: Spacing.sm },
     emptyText: { ...Typography.body, color: Colors.text.muted, textAlign: 'center' },
     groupActions: { gap: Spacing.sm },
-    actionBtn: { backgroundColor: Colors.accent.blue, paddingVertical: Spacing.md, borderRadius: BorderRadius.lg, alignItems: 'center' },
-    actionBtnSecondary: { backgroundColor: Colors.glass.bg, borderWidth: 1, borderColor: Colors.accent.blue },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.accent.blue, paddingVertical: Spacing.md, borderRadius: BorderRadius.full },
+    actionBtnSecondary: { backgroundColor: Colors.glass.bg, borderWidth: 1, borderColor: Colors.glass.border },
     actionBtnText: { ...Typography.bodyBold, color: '#fff' },
     groupHeader: { alignItems: 'center', marginBottom: Spacing.md },
     groupName: { ...Typography.h3, color: Colors.text.primary },
     groupMeta: { ...Typography.caption, color: Colors.text.muted, marginTop: 4 },
-    codeRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.sm, gap: Spacing.sm },
+    codeRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.sm, gap: 4 },
     codeText: { ...Typography.bodyBold, color: Colors.accent.purple, letterSpacing: 2 },
-    copyBtn: { ...Typography.caption, color: Colors.accent.blue, textDecorationLine: 'underline' },
-    // Modals
+    copyBtn: { ...Typography.caption, color: Colors.accent.blue, textDecorationLine: 'underline', marginLeft: Spacing.sm },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: Spacing.lg },
     modalCard: { margin: 0 },
     modalTitle: { ...Typography.h3, color: Colors.text.primary, marginBottom: Spacing.md },
@@ -403,8 +402,8 @@ const styles = StyleSheet.create({
     },
     codeInput: { letterSpacing: 4, textAlign: 'center', fontSize: 22, fontWeight: '700' },
     modalBtns: { flexDirection: 'row', gap: Spacing.sm },
-    modalCancel: { flex: 1, padding: Spacing.md, borderRadius: BorderRadius.md, backgroundColor: Colors.glass.bg, alignItems: 'center' },
+    modalCancel: { flex: 1, padding: Spacing.md, borderRadius: BorderRadius.full, backgroundColor: Colors.glass.bg, alignItems: 'center' },
     modalCancelText: { ...Typography.body, color: Colors.text.secondary },
-    modalConfirm: { flex: 1, padding: Spacing.md, borderRadius: BorderRadius.md, backgroundColor: Colors.accent.blue, alignItems: 'center' },
+    modalConfirm: { flex: 1, padding: Spacing.md, borderRadius: BorderRadius.full, backgroundColor: Colors.accent.blue, alignItems: 'center' },
     modalConfirmText: { ...Typography.bodyBold, color: '#fff' },
 });

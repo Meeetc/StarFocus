@@ -80,7 +80,7 @@ export function checkMilestone(streakDays) {
     if (milestones.includes(streakDays)) {
         return {
             days: streakDays,
-            message: `🔥 ${streakDays}-day streak! You're on fire!`,
+            message: `${streakDays}-day streak! You're on fire!`,
             freezeTokenAwarded: streakDays % 7 === 0,
         };
     }

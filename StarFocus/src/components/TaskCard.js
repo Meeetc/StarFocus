@@ -1,6 +1,7 @@
 // TaskCard — Priority-aware task card with completion slider
 import React, { useRef, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, PanResponder } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../theme';
 
 const ZONE_CONFIG = {
@@ -12,12 +13,10 @@ const ZONE_CONFIG = {
 export default function TaskCard({ task, onStartFocus, onPress, onDelete, onUpdateCompletion }) {
     const zone = ZONE_CONFIG[task.priorityZone] || ZONE_CONFIG.green;
 
-    // Local state for immediate slider feedback
     const [localCompletion, setLocalCompletion] = useState(task.completionPercent || 0);
     const trackWidthRef = useRef(0);
     const isDragging = useRef(false);
 
-    // Sync if parent updates the value externally
     useEffect(() => {
         if (!isDragging.current) {
             setLocalCompletion(task.completionPercent || 0);
@@ -61,11 +60,21 @@ export default function TaskCard({ task, onStartFocus, onPress, onDelete, onUpda
 
     const hoursLeft = task.timeRemaining;
     let timeLabel = null;
+    let timeIcon = null;
     if (hoursLeft != null) {
-        if (hoursLeft <= 0) timeLabel = '⚠️ Missed';
-        else if (hoursLeft < 1) timeLabel = 'Due < 1h';
-        else if (hoursLeft < 24) timeLabel = `${Math.round(hoursLeft)}h left`;
-        else timeLabel = `${Math.round(hoursLeft / 24)}d left`;
+        if (hoursLeft <= 0) {
+            timeLabel = 'Missed';
+            timeIcon = 'alert-circle-outline';
+        } else if (hoursLeft < 1) {
+            timeLabel = 'Due < 1h';
+            timeIcon = 'clock-alert-outline';
+        } else if (hoursLeft < 24) {
+            timeLabel = `${Math.round(hoursLeft)}h left`;
+            timeIcon = 'clock-outline';
+        } else {
+            timeLabel = `${Math.round(hoursLeft / 24)}d left`;
+            timeIcon = 'calendar-clock-outline';
+        }
     }
 
     return (
@@ -95,12 +104,19 @@ export default function TaskCard({ task, onStartFocus, onPress, onDelete, onUpda
                 {/* Meta row */}
                 <View style={styles.metaRow}>
                     {timeLabel && (
-                        <Text style={[
-                            styles.metaText,
-                            { color: hoursLeft <= 0 ? Colors.accent.red : zone.accent }
-                        ]}>
-                            {timeLabel}
-                        </Text>
+                        <View style={styles.timeBadge}>
+                            <MaterialCommunityIcons
+                                name={timeIcon}
+                                size={13}
+                                color={hoursLeft <= 0 ? Colors.accent.red : zone.accent}
+                            />
+                            <Text style={[
+                                styles.metaText,
+                                { color: hoursLeft <= 0 ? Colors.accent.red : zone.accent }
+                            ]}>
+                                {timeLabel}
+                            </Text>
+                        </View>
                     )}
                     <Text style={[styles.metaText, styles.pctLabel]}>{localCompletion}%</Text>
                     {onStartFocus && (
@@ -109,7 +125,8 @@ export default function TaskCard({ task, onStartFocus, onPress, onDelete, onUpda
                             onPress={() => onStartFocus(task)}
                             activeOpacity={0.8}
                         >
-                            <Text style={[styles.focusButtonText, { color: zone.accent }]}>⚡ Focus</Text>
+                            <MaterialCommunityIcons name="timer-outline" size={13} color={zone.accent} />
+                            <Text style={[styles.focusButtonText, { color: zone.accent }]}> Focus</Text>
                         </TouchableOpacity>
                     )}
                 </View>
@@ -122,7 +139,6 @@ export default function TaskCard({ task, onStartFocus, onPress, onDelete, onUpda
                     hitSlop={{ top: 10, bottom: 10 }}
                 >
                     <View style={[styles.sliderFill, { width: `${localCompletion}%`, backgroundColor: zone.accent }]} />
-                    {/* Thumb */}
                     <View style={[styles.sliderThumb, {
                         left: `${localCompletion}%`,
                         backgroundColor: zone.accent,
@@ -130,7 +146,7 @@ export default function TaskCard({ task, onStartFocus, onPress, onDelete, onUpda
                     }]} />
                 </View>
                 {onUpdateCompletion && (
-                    <Text style={styles.sliderHint}>← drag to update progress →</Text>
+                    <Text style={styles.sliderHint}>drag to update progress</Text>
                 )}
             </View>
         </TouchableOpacity>
@@ -147,7 +163,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         marginBottom: Spacing.sm,
     },
-    priorityIndicator: { width: 4 },
+    priorityIndicator: { width: 3, borderRadius: 2 },
     content: { flex: 1, padding: Spacing.md },
     topRow: {
         flexDirection: 'row',
@@ -165,24 +181,35 @@ const styles = StyleSheet.create({
         marginTop: Spacing.sm,
         gap: Spacing.md,
     },
+    timeBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+    },
     metaText: { ...Typography.caption, color: Colors.text.secondary },
     pctLabel: { flex: 1, fontWeight: '600', color: Colors.text.primary },
-    focusButton: { paddingHorizontal: Spacing.md, paddingVertical: 6, borderRadius: BorderRadius.full },
+    focusButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: Spacing.md,
+        paddingVertical: 6,
+        borderRadius: BorderRadius.full,
+    },
     focusButtonText: { fontSize: 12, fontWeight: '700' },
     sliderTrack: {
-        height: 8,
+        height: 6,
         backgroundColor: Colors.glass.highlight,
-        borderRadius: 4,
+        borderRadius: 3,
         marginTop: Spacing.sm,
         overflow: 'visible',
     },
-    sliderFill: { height: '100%', borderRadius: 4 },
+    sliderFill: { height: '100%', borderRadius: 3 },
     sliderThumb: {
         position: 'absolute',
         top: -4,
-        width: 16,
-        height: 16,
-        borderRadius: 8,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
         borderWidth: 2,
         borderColor: Colors.bg.primary,
     },

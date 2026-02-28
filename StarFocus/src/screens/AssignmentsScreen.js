@@ -5,6 +5,7 @@ import {
     ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../theme';
 import GlassCard from '../components/GlassCard';
@@ -19,7 +20,7 @@ const ZONE_COLORS = {
 
 function formatDue(dueDate, hoursLeft) {
     if (!dueDate) return 'No due date';
-    if (hoursLeft <= 0) return '⚠️ Missed';
+    if (hoursLeft <= 0) return 'Missed';
     if (hoursLeft < 1) return 'Due < 1h';
     if (hoursLeft < 24) return `Due in ${Math.round(hoursLeft)}h`;
     const days = Math.round(hoursLeft / 24);
@@ -27,7 +28,7 @@ function formatDue(dueDate, hoursLeft) {
 }
 
 function formatStatus(task) {
-    if (task.submissionStatus === 'TURNED_IN') return '✅ Turned In';
+    if (task.submissionStatus === 'TURNED_IN') return 'Turned In';
     if ((task.completionPercent || 0) > 0) return `${task.completionPercent}% done`;
     return 'Not started';
 }
@@ -45,8 +46,6 @@ export default function AssignmentsScreen() {
         try {
             const all = await getTasks();
             const classroom = all.filter(t => t.source === 'classroom');
-
-            // Group by courseName
             const groups = {};
             for (const task of classroom) {
                 const course = task.courseName || 'Other';
@@ -57,7 +56,6 @@ export default function AssignmentsScreen() {
                     zone: getAbsolutePriorityZone(task),
                 });
             }
-            // Sort each group by hoursLeft ascending
             for (const course in groups) {
                 groups[course].sort((a, b) => a.hoursLeft - b.hoursLeft);
             }
@@ -99,12 +97,12 @@ export default function AssignmentsScreen() {
                     />
                 }
             >
-                <Text style={styles.title}>📚 Assignments</Text>
-                <Text style={styles.subtitle}>From Google Classroom · Pull to sync</Text>
+                <Text style={styles.title}>Assignments</Text>
+                <Text style={styles.subtitle}>From Google Classroom  ·  Pull to sync</Text>
 
                 {courseNames.length === 0 ? (
                     <GlassCard style={styles.emptyCard}>
-                        <Text style={styles.emptyEmoji}>📂</Text>
+                        <MaterialCommunityIcons name="folder-open-outline" size={40} color={Colors.text.muted} />
                         <Text style={styles.emptyText}>
                             No assignments yet. Sync with Classroom from the Dashboard.
                         </Text>
@@ -141,28 +139,36 @@ export default function AssignmentsScreen() {
                                                 </Text>
                                                 {!isTurnedIn && (
                                                     <TouchableOpacity
-                                                        style={[styles.focusBtn, { backgroundColor: `${zoneColor}22` }]}
+                                                        style={[styles.focusBtn, { backgroundColor: `${zoneColor}18` }]}
                                                         onPress={() => handleStartFocus(task)}
                                                     >
-                                                        <Text style={[styles.focusBtnText, { color: zoneColor }]}>⚡ Focus</Text>
+                                                        <MaterialCommunityIcons name="timer-outline" size={12} color={zoneColor} />
+                                                        <Text style={[styles.focusBtnText, { color: zoneColor }]}> Focus</Text>
                                                     </TouchableOpacity>
                                                 )}
                                             </View>
 
                                             <View style={styles.assignmentMeta}>
-                                                <Text style={[
-                                                    styles.dueText,
-                                                    isMissed && styles.missedText,
-                                                    isTurnedIn && { color: Colors.accent.green },
-                                                ]}>
-                                                    {isTurnedIn ? '✅ Turned In' : dueText}
-                                                </Text>
+                                                <View style={styles.statusBadge}>
+                                                    {isTurnedIn ? (
+                                                        <MaterialCommunityIcons name="check-circle-outline" size={13} color={Colors.accent.green} />
+                                                    ) : isMissed ? (
+                                                        <MaterialCommunityIcons name="alert-circle-outline" size={13} color={Colors.accent.red} />
+                                                    ) : null}
+                                                    <Text style={[
+                                                        styles.dueText,
+                                                        isMissed && styles.missedText,
+                                                        isTurnedIn && { color: Colors.accent.green },
+                                                    ]}>
+                                                        {isTurnedIn ? 'Turned In' : dueText}
+                                                    </Text>
+                                                </View>
                                                 {!isTurnedIn && (
                                                     <Text style={styles.statusText}>{formatStatus(task)}</Text>
                                                 )}
                                             </View>
 
-                                            {/* Progress bar (read-only here) */}
+                                            {/* Progress bar */}
                                             {!isTurnedIn && (
                                                 <View style={styles.progressTrack}>
                                                     <View style={[
@@ -181,7 +187,7 @@ export default function AssignmentsScreen() {
                         </View>
                     ))
                 )}
-                <View style={{ height: 100 }} />
+                <View style={{ height: 120 }} />
             </ScrollView>
         </SafeAreaView>
     );
@@ -194,8 +200,7 @@ const styles = StyleSheet.create({
     center: { flex: 1, backgroundColor: Colors.bg.primary, alignItems: 'center', justifyContent: 'center' },
     title: { ...Typography.h1, color: Colors.text.primary },
     subtitle: { ...Typography.caption, color: Colors.text.muted, marginBottom: Spacing.lg, marginTop: 4 },
-    emptyCard: { alignItems: 'center', paddingVertical: Spacing.xl },
-    emptyEmoji: { fontSize: 40, marginBottom: Spacing.sm },
+    emptyCard: { alignItems: 'center', paddingVertical: Spacing.xl, gap: Spacing.sm },
     emptyText: { ...Typography.body, color: Colors.text.muted, textAlign: 'center' },
     courseGroup: { marginBottom: Spacing.lg },
     courseHeader: {
@@ -217,17 +222,20 @@ const styles = StyleSheet.create({
         marginBottom: Spacing.sm, padding: 0,
     },
     doneCard: { opacity: 0.6 },
-    stripe: { width: 4 },
+    stripe: { width: 3, borderRadius: 2 },
     assignmentContent: { flex: 1, padding: Spacing.md },
     assignmentTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: Spacing.sm },
     assignmentTitle: { ...Typography.bodyBold, color: Colors.text.primary, flex: 1 },
     doneText: { textDecorationLine: 'line-through', color: Colors.text.muted },
     focusBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
         paddingHorizontal: Spacing.sm, paddingVertical: 4,
         borderRadius: BorderRadius.full,
     },
     focusBtnText: { fontSize: 12, fontWeight: '700' },
     assignmentMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+    statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     dueText: { ...Typography.caption, color: Colors.text.secondary },
     missedText: { color: Colors.accent.red, fontWeight: '600' },
     statusText: { ...Typography.caption, color: Colors.text.muted },

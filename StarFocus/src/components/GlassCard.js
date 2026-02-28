@@ -1,4 +1,4 @@
-// GlassCard — Redesigned per design guidelines
+// GlassCard — Premium frosted glass panel
 // Translucent cards with soft depth, floating above background
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
@@ -24,10 +24,10 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.glass.bg,
         borderWidth: 1,
         borderColor: Colors.glass.border,
-        borderRadius: BorderRadius.xl,   // 20px per guidelines
+        borderRadius: BorderRadius.xxl,   // 24dp premium radius
         overflow: 'hidden',
     },
     padding: {
-        padding: Spacing.md,
+        padding: Spacing.lg,   // 24dp generous internal padding
     },
 });

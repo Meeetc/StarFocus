@@ -9,6 +9,7 @@ import {
     AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Circle } from 'react-native-svg';
 import { Colors, Typography, Spacing, BorderRadius } from '../theme';
 import GlassCard from '../components/GlassCard';
@@ -49,22 +50,18 @@ export default function FocusSprintScreen({ route, navigation }) {
         return () => clearInterval(timerRef.current);
     }, [isRunning, isPaused]);
 
-    // ── Auto-detect app switches via AppState ──
+    // Auto-detect app switches via AppState
     const appStateRef = useRef(AppState.currentState);
 
     useEffect(() => {
         if (!isRunning || isPaused) return;
 
         const subscription = AppState.addEventListener('change', nextAppState => {
-            // App came back to foreground from background/inactive
             if (
                 appStateRef.current.match(/inactive|background/) &&
                 nextAppState === 'active'
             ) {
-                // Increment app switch counter
                 setAppSwitches(prev => prev + 1);
-
-                // Increment impulse counter + escalating interventions
                 setImpulseOpens(prev => {
                     const newCount = prev + 1;
                     if (newCount >= 3) {
@@ -72,12 +69,10 @@ export default function FocusSprintScreen({ route, navigation }) {
                     } else if (newCount >= 2) {
                         showOverlay('Take a deep breath.\nYou\'re getting distracted.', 'greyscale');
                     } else {
-                        showOverlay('🧘 Pause.\nIs this helping your assignment?', 'breathing');
+                        showOverlay('Pause.\nIs this helping your assignment?', 'breathing');
                     }
                     return newCount;
                 });
-
-                // Haptic deterrent on every return
                 vibrateDeterrent();
             }
             appStateRef.current = nextAppState;
@@ -111,7 +106,7 @@ export default function FocusSprintScreen({ route, navigation }) {
         setIsRunning(false);
         setIsPaused(false);
         setSessionComplete(true);
-        vibrateSuccess(); // Native haptic for completion
+        vibrateSuccess();
 
         const elapsedMinutes = selectedDuration - secondsLeft / 60;
         const deepWorkMins = Math.max(1, Math.round(elapsedMinutes));
@@ -123,7 +118,6 @@ export default function FocusSprintScreen({ route, navigation }) {
         });
         setFocusResult(result);
 
-        // ── Persist the session ──
         try {
             const now = new Date();
             await saveSession({
@@ -138,7 +132,6 @@ export default function FocusSprintScreen({ route, navigation }) {
                 adjustedScore: result.adjustedScore,
             });
 
-            // ── Update streak via streaks.js (30-min daily threshold) ──
             const currentStreak = await getStreakData();
             const updatedStreak = updateStreak(currentStreak, deepWorkMins, 30);
             await saveStreakData(updatedStreak);
@@ -156,7 +149,7 @@ export default function FocusSprintScreen({ route, navigation }) {
 
     // Circular progress
     const size = 260;
-    const strokeWidth = 8;
+    const strokeWidth = 6;
     const radius = (size - strokeWidth) / 2;
     const circumference = 2 * Math.PI * radius;
     const strokeDashoffset = circumference * (1 - progress);
@@ -168,9 +161,12 @@ export default function FocusSprintScreen({ route, navigation }) {
                 <View style={styles.header}>
                     <Text style={styles.title}>Focus Sprint</Text>
                     {task && (
-                        <Text style={styles.taskName} numberOfLines={1}>
-                            🎯 {task.title}
-                        </Text>
+                        <View style={styles.taskBadge}>
+                            <MaterialCommunityIcons name="target" size={14} color={Colors.accent.purple} />
+                            <Text style={styles.taskName} numberOfLines={1}>
+                                {task.title}
+                            </Text>
+                        </View>
                     )}
                 </View>
 
@@ -273,16 +269,23 @@ export default function FocusSprintScreen({ route, navigation }) {
                 <View style={styles.controls}>
                     {!isRunning && !sessionComplete && (
                         <TouchableOpacity style={styles.startButton} onPress={handleStart} activeOpacity={0.8}>
-                            <Text style={styles.startButtonText}>▶ START SPRINT</Text>
+                            <MaterialCommunityIcons name="play" size={20} color={Colors.text.primary} />
+                            <Text style={styles.startButtonText}>  START SPRINT</Text>
                         </TouchableOpacity>
                     )}
                     {isRunning && (
                         <View style={styles.runningControls}>
                             <TouchableOpacity style={styles.secondaryButton} onPress={handlePause}>
-                                <Text style={styles.secondaryButtonText}>{isPaused ? '▶ Resume' : '⏸ Pause'}</Text>
+                                <MaterialCommunityIcons
+                                    name={isPaused ? 'play' : 'pause'}
+                                    size={18}
+                                    color={Colors.accent.blue}
+                                />
+                                <Text style={styles.secondaryButtonText}> {isPaused ? 'Resume' : 'Pause'}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.stopButton} onPress={handleStop}>
-                                <Text style={styles.stopButtonText}>⏹ End</Text>
+                                <MaterialCommunityIcons name="stop" size={18} color={Colors.text.primary} />
+                                <Text style={styles.stopButtonText}> End</Text>
                             </TouchableOpacity>
                         </View>
                     )}
@@ -295,12 +298,11 @@ export default function FocusSprintScreen({ route, navigation }) {
                             }}
                             activeOpacity={0.8}
                         >
-                            <Text style={styles.startButtonText}>🔄 NEW SPRINT</Text>
+                            <MaterialCommunityIcons name="refresh" size={20} color={Colors.text.primary} />
+                            <Text style={styles.startButtonText}>  NEW SPRINT</Text>
                         </TouchableOpacity>
                     )}
                 </View>
-
-
             </View>
         </SafeAreaView>
     );
@@ -308,10 +310,10 @@ export default function FocusSprintScreen({ route, navigation }) {
 
 function formatMultiplier(m) {
     const labels = {
-        red_priority: '🔴 1.5×',
-        quiz_task: '📝 1.3×',
-        deep_work: '🧠 1.1×',
-        zero_opens: '✨ 1.3×',
+        red_priority: '1.5x Priority',
+        quiz_task: '1.3x Quiz',
+        deep_work: '1.1x Deep Work',
+        zero_opens: '1.3x Zero Opens',
     };
     return labels[m] || m;
 }
@@ -334,10 +336,15 @@ const styles = StyleSheet.create({
         ...Typography.h2,
         color: Colors.text.primary,
     },
+    taskBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: Spacing.xs,
+    },
     taskName: {
         ...Typography.caption,
         color: Colors.accent.purple,
-        marginTop: 4,
     },
     timerContainer: {
         alignItems: 'center',
@@ -425,15 +432,17 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     startButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
         backgroundColor: Colors.accent.blue,
         paddingVertical: Spacing.md,
-        borderRadius: BorderRadius.lg,
-        alignItems: 'center',
+        borderRadius: BorderRadius.full,
     },
     startButtonText: {
         ...Typography.bodyBold,
         color: Colors.text.primary,
-        fontSize: 18,
+        fontSize: 16,
     },
     runningControls: {
         flexDirection: 'row',
@@ -441,11 +450,13 @@ const styles = StyleSheet.create({
     },
     secondaryButton: {
         flex: 1,
-        paddingVertical: Spacing.md,
-        borderRadius: BorderRadius.lg,
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: Spacing.md,
+        borderRadius: BorderRadius.full,
         borderWidth: 1,
-        borderColor: Colors.accent.blue,
+        borderColor: Colors.glass.border,
     },
     secondaryButtonText: {
         ...Typography.bodyBold,
@@ -453,14 +464,15 @@ const styles = StyleSheet.create({
     },
     stopButton: {
         flex: 1,
-        paddingVertical: Spacing.md,
-        borderRadius: BorderRadius.lg,
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: Spacing.md,
+        borderRadius: BorderRadius.full,
         backgroundColor: Colors.priority.red,
     },
     stopButtonText: {
         ...Typography.bodyBold,
         color: Colors.text.primary,
     },
-
 });

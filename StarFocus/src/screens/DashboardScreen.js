@@ -10,6 +10,7 @@ import {
     ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Typography, Spacing, BorderRadius } from '../theme';
 import GlassCard from '../components/GlassCard';
@@ -21,7 +22,7 @@ import { getTasks, deleteTask, updateTaskCompletion, saveTask } from '../service
 import { fullSync } from '../services/classroom';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-const FILTER_TABS = ['All', 'Classroom', 'Manual', '🔴 Critical'];
+const FILTER_TABS = ['All', 'Classroom', 'Manual', 'Critical'];
 
 export default function DashboardScreen({ navigation }) {
     const [tasks, setTasks] = useState([]);
@@ -47,22 +48,17 @@ export default function DashboardScreen({ navigation }) {
             const tokens = await GoogleSignin.getTokens();
             if (tokens.accessToken) {
                 const classroomTasks = await fullSync(tokens.accessToken);
-                // Get existing tasks to avoid duplicates
                 const existing = await getTasks();
                 const existingIds = new Set(existing.map(t => t.id));
-
                 let addedCount = 0;
                 for (const ct of classroomTasks) {
                     if (!existingIds.has(ct.id)) {
-                        await saveTask({
-                            ...ct,
-                            id: ct.id, // Keep classroom ID for dedup
-                        });
+                        await saveTask({ ...ct, id: ct.id });
                         addedCount++;
                     }
                 }
                 if (addedCount > 0) {
-                    await loadTasks(); // Refresh the list
+                    await loadTasks();
                 }
             }
         } catch (error) {
@@ -72,7 +68,6 @@ export default function DashboardScreen({ navigation }) {
         }
     };
 
-    // Reload tasks every time this screen comes into focus
     useFocusEffect(
         useCallback(() => {
             loadTasks().then(() => syncClassroom());
@@ -86,18 +81,16 @@ export default function DashboardScreen({ navigation }) {
         setRefreshing(false);
     }, []);
 
-    // Rank tasks through the priority engine
     const rankedTasks = rankTasks(tasks);
     const workload = calculateWorkloadScore(rankedTasks);
 
-    // Filter tasks
     const filteredTasks = rankedTasks.filter(task => {
         switch (activeFilter) {
             case 'Classroom':
                 return task.source === 'classroom';
             case 'Manual':
                 return task.source === 'manual';
-            case '🔴 Critical':
+            case 'Critical':
                 return task.priorityZone === 'red';
             default:
                 return true;
@@ -118,7 +111,6 @@ export default function DashboardScreen({ navigation }) {
         await loadTasks();
     };
 
-    // Count tasks by zone
     const redCount = rankedTasks.filter(t => t.priorityZone === 'red').length;
     const amberCount = rankedTasks.filter(t => t.priorityZone === 'amber').length;
     const greenCount = rankedTasks.filter(t => t.priorityZone === 'green').length;
@@ -144,14 +136,15 @@ export default function DashboardScreen({ navigation }) {
                 {/* Header */}
                 <View style={styles.header}>
                     <View>
-                        <Text style={styles.greeting}>Good {getTimeOfDay()} 👋</Text>
+                        <Text style={styles.greeting}>Good {getTimeOfDay()}</Text>
                         <Text style={styles.subtitle}>Here's your academic landscape</Text>
                     </View>
                     <TouchableOpacity
                         style={styles.addButton}
                         onPress={() => navigation.navigate('AddTask')}
+                        activeOpacity={0.8}
                     >
-                        <Text style={styles.addButtonText}>➕</Text>
+                        <MaterialCommunityIcons name="plus" size={22} color={Colors.text.primary} />
                     </TouchableOpacity>
                 </View>
 
@@ -190,6 +183,9 @@ export default function DashboardScreen({ navigation }) {
                             ]}
                             onPress={() => setActiveFilter(tab)}
                         >
+                            {tab === 'Critical' && (
+                                <View style={styles.criticalDot} />
+                            )}
                             <Text
                                 style={[
                                     styles.filterTabText,
@@ -218,12 +214,13 @@ export default function DashboardScreen({ navigation }) {
 
                 {filteredTasks.length === 0 && (
                     <GlassCard style={styles.emptyCard}>
-                        <Text style={styles.emptyText}>No tasks in this category 🎉</Text>
+                        <MaterialCommunityIcons name="check-circle-outline" size={36} color={Colors.text.muted} />
+                        <Text style={styles.emptyText}>No tasks in this category</Text>
                     </GlassCard>
                 )}
 
-                {/* Bottom spacer */}
-                <View style={{ height: 100 }} />
+                {/* Bottom spacer for floating tab bar */}
+                <View style={{ height: 120 }} />
             </ScrollView>
         </SafeAreaView>
     );
@@ -270,9 +267,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    addButtonText: {
-        fontSize: 20,
-    },
     gaugeCard: {
         alignItems: 'center',
         marginBottom: Spacing.lg,
@@ -300,6 +294,9 @@ const styles = StyleSheet.create({
         gap: Spacing.sm,
     },
     filterTab: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
         paddingHorizontal: Spacing.md,
         paddingVertical: Spacing.sm,
         borderRadius: BorderRadius.full,
@@ -310,6 +307,12 @@ const styles = StyleSheet.create({
     filterTabActive: {
         backgroundColor: Colors.accent.blue,
         borderColor: Colors.accent.blue,
+    },
+    criticalDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        backgroundColor: Colors.priority.red,
     },
     filterTabText: {
         ...Typography.caption,
@@ -327,6 +330,7 @@ const styles = StyleSheet.create({
     emptyCard: {
         alignItems: 'center',
         paddingVertical: Spacing.xl,
+        gap: Spacing.sm,
     },
     emptyText: {
         ...Typography.body,
@@ -334,7 +338,7 @@ const styles = StyleSheet.create({
     },
     loading: {
         flex: 1,
-        backgroundColor: '#0A0E1A',
+        backgroundColor: Colors.bg.primary,
         alignItems: 'center',
         justifyContent: 'center',
     },
