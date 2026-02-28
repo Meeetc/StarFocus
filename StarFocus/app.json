@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "StarFocus",
+    "slug": "StarFocus",
+    "owner": "meeet_c",
+    "version": "1.0.0",
+    "extra": {
+      "eas": {
+        "projectId": "0ef6c83e-3646-4361-aa50-12da39e556df"
+      }
+    }
+  }
+}

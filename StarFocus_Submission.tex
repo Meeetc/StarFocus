@@ -1,0 +1,203 @@
+\documentclass[12pt, a4paper]{article}
+
+% -- Packages --
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{parskip}
+\usepackage{amsmath}
+
+\geometry{margin=1in}
+
+% -- Colors --
+\definecolor{starblue}{HTML}{1E3A5F}
+\definecolor{starorange}{HTML}{E67E22}
+\definecolor{stargray}{HTML}{555555}
+\definecolor{lightbg}{HTML}{F0F4F8}
+
+% -- Hyperlinks --
+\hypersetup{
+    colorlinks=true,
+    linkcolor=starblue,
+    urlcolor=starorange
+}
+
+% -- Section Formatting --
+\titleformat{\section}{\Large\bfseries\color{starblue}}{}{0em}{}[\titlerule]
+\titleformat{\subsection}{\large\bfseries\color{starblue}}{}{0em}{}
+
+% -- Header / Footer --
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{stargray}{\small StarFocus --- Hackathon Submission}}
+\fancyhead[R]{\textcolor{stargray}{\small Team StarFocus}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\begin{document}
+
+% ============================================================
+% TITLE
+% ============================================================
+\begin{center}
+    {\Huge\bfseries\color{starblue} StarFocus}\\[6pt]
+    {\Large Reclaiming Student Focus in the Age of Digital Distraction}\\[20pt]
+    {\large Team StarFocus}\\[4pt]
+    {\normalsize February 28, 2026}
+\end{center}
+
+\vspace{1em}
+
+% ============================================================
+\section{Problem Statement}
+% ============================================================
+
+\begin{quote}
+\textit{``University students lose an estimated 2--4 productive hours daily to decision fatigue, task paralysis, and dopamine-driven attention drift. There exists no unified platform that (a) intelligently ranks academic tasks by urgency and impact, (b) applies behavioral nudges at the point of distraction, and (c) harnesses social accountability to sustain deep work --- all within the student's existing academic ecosystem.''}
+\end{quote}
+
+\subsection{Problem Description}
+
+\begin{enumerate}[leftmargin=*, label=\textbf{\arabic*.}]
+    \item \textbf{Decision Fatigue:} Students spend 30--45 minutes daily just figuring out \textit{what} to study. With 5--7 courses, each with overlapping deadlines and varying grade weightages, the cognitive cost of choosing is itself a productivity killer.
+
+    \item \textbf{Task Paralysis:} Even after choosing a task, students feel overwhelmed by its perceived size. Without clear guidance on where to begin, procrastination becomes the default response.
+
+    \item \textbf{Attention Fragmentation:} The average student picks up their phone 80+ times per day. Each context switch costs 23 minutes of refocus time (Mark et al., 2005), turning a 4-hour study block into barely 90 minutes of actual deep work.
+
+    \item \textbf{Lack of Motivation:} Studying is an invisible activity --- there is no social validation, no visible progress, and no accountability. Unlike fitness (Strava) or social media (likes), focus effort goes entirely unrecognized.
+
+    \item \textbf{Tool Fragmentation:} Students juggle Google Calendar, Notion, Forest, and Todoist --- none of which talk to each other or to the university's LMS. The result is more overhead, not less.
+\end{enumerate}
+
+% ============================================================
+\section{Theme: Attention Economy on Campus}
+% ============================================================
+
+\textbf{Selected Theme:} \textit{Theme A --- Attention Economy on Campus}
+
+\begin{quote}
+\textit{``College isn't short on time. It's short on attention.''}
+\end{quote}
+
+\subsection{Justification of Theme Relevance}
+
+\begin{enumerate}[leftmargin=*, label=\textbf{\arabic*.}]
+    \item \textbf{Attention is the core bottleneck, not time:} Students have 6--8 hours of free time daily, yet productive output averages only 1.5--2 hours. StarFocus directly targets this attention gap by reducing decision fatigue (intelligent ranking) and protecting focus time (workload-adaptive interventions).
+
+    \item \textbf{Notifications, reels, and social pressure are the enemy:} The theme identifies exactly what StarFocus combats --- dopamine-driven digital distraction. Our three-layer intervention system (breathing exercise $\rightarrow$ greyscale $\rightarrow$ vibration) applies friction precisely at the moment of distraction, not through blanket blocking.
+
+    \item \textbf{Helping students take control of their time:} StarFocus's priority ranking engine with Google Classroom integration eliminates the ``what should I work on?'' problem entirely, giving students an auto-prioritized, intelligent dashboard --- no manual setup needed.
+
+    \item \textbf{Reducing mental clutter:} By aggregating all obligations (academic via Google Classroom + clubs/extracurriculars via manual entry) into a single workload score (0--100), StarFocus replaces scattered to-do lists with one clear number that tells students exactly how much pressure they are under.
+
+    \item \textbf{Making better decisions about where focus goes:} The social motivation layer (leaderboards, study groups, Strava-style progress charts) makes focus \textit{visible and rewarding} --- transforming an invisible activity into a recognized, competitive, and habit-forming experience.
+\end{enumerate}
+
+% ============================================================
+\section{Technical Approach}
+% ============================================================
+
+StarFocus is a \textbf{three-phase Android application} built around three psychological primitives:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Phase} & \textbf{Name} & \textbf{Purpose} \\
+\hline
+Phase 1 & \textbf{The Brain} & Intelligent task ranking via Google Classroom API sync + manual entry. Priority formula: $\dfrac{\text{Grade Weightage} \times (1 - \text{Completion\%})}{\text{Time Remaining}} \times \text{Quiz Prep Multiplier}$ \\
+\hline
+Phase 2 & \textbf{The Shield} & Workload-adaptive distraction intervention: breathing exercise $\rightarrow$ greyscale mode $\rightarrow$ continuous vibration. Timers scale with workload score (Low / Moderate / High). \\
+\hline
+Phase 3 & \textbf{The Hook} & Social motivation: opt-in global leaderboard, study groups, Strava-style progress charts, streaks with freeze tokens, and badge system. \\
+\hline
+\end{tabularx}
+\end{center}
+
+\subsection{Technology Stack (Zero Cost)}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{|l|l|X|}
+\hline
+\textbf{Layer} & \textbf{Technology} & \textbf{Justification} \\
+\hline
+Mobile App & React Native + Expo & Hackathon-fast dev; hot reload; Expo Go for instant testing \\
+\hline
+Backend + DB + Auth & Supabase & All-in-one: PostgreSQL, real-time, OAuth 2.0; free tier \\
+\hline
+Usage Monitoring & Android Accessibility API & OS-level foreground app detection \\
+\hline
+Notifications & Firebase Cloud Messaging & Free tier; native Android support \\
+\hline
+Charting & react-native-chart-kit & Strava-style progress visualizations \\
+\hline
+Analytics & PostHog & Free tier (1M events/month) \\
+\hline
+\end{tabularx}
+\end{center}
+
+% ============================================================
+\section{Architecture Diagram}
+% ============================================================
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=0.8cm,
+    phase/.style={draw=starblue, fill=lightbg, rounded corners=8pt, text width=13.5cm, minimum height=2cm, align=left, font=\small},
+    phasetitle/.style={font=\bfseries\color{starblue}},
+    backend/.style={draw=starorange, fill=starorange!10, rounded corners=6pt, text width=13.5cm, minimum height=1cm, align=center, font=\small},
+    arrow/.style={->, thick, color=starorange, >=stealth, line width=1.5pt}
+]
+
+% Phase 1
+\node[phase] (p1) {
+    \textbf{\color{starblue}PHASE 1 --- The Brain (Awareness \& Ranking Engine)}\\[4pt]
+    Google Classroom API (OAuth 2.0) $\rightarrow$ Quiz \& Task Parser $\rightarrow$ Priority Ranking Engine\\
+    Manual Task Entry (clubs, personal) $\rightarrow$ Workload Score (0--100) $\rightarrow$ Heatmap Dashboard
+};
+
+% Phase 2
+\node[phase, below=0.8cm of p1] (p2) {
+    \textbf{\color{starblue}PHASE 2 --- The Shield (Focus Execution System)}\\[4pt]
+    App Usage Monitor (Accessibility API) $\rightarrow$ Workload-Adaptive Intervention\\
+    Breathing (0.5--1h) $\rightarrow$ Greyscale (1--2h) $\rightarrow$ Vibration + Overlay (1.5--3h)\\
+    Focus Sprint Mode $\rightarrow$ Focus Score Calculator
+};
+
+% Phase 3
+\node[phase, below=0.8cm of p2] (p3) {
+    \textbf{\color{starblue}PHASE 3 --- The Hook (Social Motivation Layer)}\\[4pt]
+    Global Leaderboard (opt-in) + Study Groups $\rightarrow$ Strava-style Progress Viz\\
+    Streaks \& Freeze Tokens $\rightarrow$ Badge \& Recognition System
+};
+
+% Backend
+\node[backend, below=0.8cm of p3] (be) {
+    \textbf{Backend:} Supabase (PostgreSQL + Real-time + Auth) \quad$\vert$\quad Firebase Cloud Messaging \quad$\vert$\quad PostHog Analytics
+};
+
+% Arrows
+\draw[arrow] (p1.south) -- (p2.north);
+\draw[arrow] (p2.south) -- (p3.north);
+\draw[arrow] (p3.south) -- (be.north);
+
+\end{tikzpicture}
+\end{center}
+
+\vspace{0.5em}
+
+\begin{center}
+\small\textit{All data flows through Supabase for real-time sync. Usage monitoring and vibration run on-device via Android native modules. Focus Scores feed into leaderboards and progress visualization in real-time.}
+\end{center}
+
+\end{document}
