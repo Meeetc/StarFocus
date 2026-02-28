@@ -6,6 +6,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     Alert,
+    AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
@@ -46,6 +47,43 @@ export default function FocusSprintScreen({ route, navigation }) {
             }, 1000);
         }
         return () => clearInterval(timerRef.current);
+    }, [isRunning, isPaused]);
+
+    // ── Auto-detect app switches via AppState ──
+    const appStateRef = useRef(AppState.currentState);
+
+    useEffect(() => {
+        if (!isRunning || isPaused) return;
+
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            // App came back to foreground from background/inactive
+            if (
+                appStateRef.current.match(/inactive|background/) &&
+                nextAppState === 'active'
+            ) {
+                // Increment app switch counter
+                setAppSwitches(prev => prev + 1);
+
+                // Increment impulse counter + escalating interventions
+                setImpulseOpens(prev => {
+                    const newCount = prev + 1;
+                    if (newCount >= 3) {
+                        showOverlay('You\'ve left the app ' + newCount + ' times.\nYour workload is high — get back to work!', 'vibration');
+                    } else if (newCount >= 2) {
+                        showOverlay('Take a deep breath.\nYou\'re getting distracted.', 'greyscale');
+                    } else {
+                        showOverlay('🧘 Pause.\nIs this helping your assignment?', 'breathing');
+                    }
+                    return newCount;
+                });
+
+                // Haptic deterrent on every return
+                vibrateDeterrent();
+            }
+            appStateRef.current = nextAppState;
+        });
+
+        return () => subscription.remove();
     }, [isRunning, isPaused]);
 
     const handleStart = () => {
@@ -106,32 +144,6 @@ export default function FocusSprintScreen({ route, navigation }) {
             await saveStreakData(updatedStreak);
         } catch (error) {
             console.error('Failed to save session:', error);
-        }
-    };
-
-    // Simulate app switch detection (native module tracks this in production)
-    const simulateAppSwitch = () => {
-        if (isRunning) {
-            setAppSwitches(prev => prev + 1);
-            vibrateDeterrent(); // Native escalating vibration
-        }
-    };
-
-    const simulateImpulseOpen = () => {
-        if (isRunning) {
-            setImpulseOpens(prev => {
-                const newCount = prev + 1;
-                // Escalating intervention stack
-                if (newCount >= 3) {
-                    showOverlay('You\'ve opened flagged apps 3 times.\nYour workload is high — get back to work!', 'vibration');
-                    vibrateDeterrent();
-                } else if (newCount >= 2) {
-                    showOverlay('Take a deep breath.\nYou\'re getting distracted.', 'greyscale');
-                } else {
-                    showOverlay('🧘 Pause.\nIs this helping your assignment?', 'breathing');
-                }
-                return newCount;
-            });
         }
     };
 
@@ -288,25 +300,7 @@ export default function FocusSprintScreen({ route, navigation }) {
                     )}
                 </View>
 
-                {/* Interaction tracking — triggers interventions */}
-                {isRunning && (
-                    <View style={styles.simRow}>
-                        <View style={styles.simGroup}>
-                            <TouchableOpacity style={styles.simButton} onPress={simulateAppSwitch}>
-                                <Text style={styles.simText}>📱 App Switch</Text>
-                                <Text style={styles.simCount}>{appSwitches}×</Text>
-                            </TouchableOpacity>
-                            <Text style={styles.simHint}>Left the app</Text>
-                        </View>
-                        <View style={styles.simGroup}>
-                            <TouchableOpacity style={[styles.simButton, styles.impulseButton]} onPress={simulateImpulseOpen}>
-                                <Text style={styles.simText}>🎯 Impulse Open</Text>
-                                <Text style={styles.simCount}>{impulseOpens}×</Text>
-                            </TouchableOpacity>
-                            <Text style={styles.simHint}>Opened distracting app</Text>
-                        </View>
-                    </View>
-                )}
+
             </View>
         </SafeAreaView>
     );
@@ -468,43 +462,5 @@ const styles = StyleSheet.create({
         ...Typography.bodyBold,
         color: Colors.text.primary,
     },
-    simRow: {
-        flexDirection: 'row',
-        gap: Spacing.sm,
-        marginTop: Spacing.md,
-    },
-    simButton: {
-        paddingHorizontal: Spacing.md,
-        paddingVertical: Spacing.sm,
-        borderRadius: BorderRadius.sm,
-        backgroundColor: Colors.glass.bg,
-        borderWidth: 1,
-        borderColor: Colors.glass.border,
-    },
-    impulseButton: {
-        borderColor: Colors.accent.orange,
-    },
-    simText: {
-        ...Typography.caption,
-        color: Colors.text.muted,
-    },
-    simCount: {
-        ...Typography.caption,
-        color: Colors.accent.orange,
-        fontWeight: '700',
-        marginTop: 2,
-    },
-    simGroup: {
-        flex: 1,
-        alignItems: 'center',
-        gap: 4,
-    },
-    simHint: {
-        ...Typography.label,
-        color: Colors.text.muted,
-        fontSize: 9,
-        textAlign: 'center',
-        textTransform: 'none',
-        letterSpacing: 0,
-    },
+
 });

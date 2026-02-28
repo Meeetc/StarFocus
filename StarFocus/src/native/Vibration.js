@@ -28,17 +28,22 @@ export function vibratePulse(durationMs = 200, amplitude = 128) {
 
 /**
  * Uncomfortable escalating vibration for distraction deterrence.
- * Simulates urgency with notification feedback.
+ * Fires multiple heavy haptic bursts for a sustained, attention-grabbing pattern.
  */
 export function vibrateDeterrent() {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150);
+    setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning), 300);
+    setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 450);
+    setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error), 600);
 }
 
 /**
- * Gentle success haptic feedback.
+ * Success haptic feedback — double burst for a satisfying completion feel.
  */
 export function vibrateSuccess() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setTimeout(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success), 200);
 }
 
 /**
