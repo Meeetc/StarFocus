@@ -33,7 +33,12 @@ class MainApplication : Application(), ReactApplication {
       }
 
   override val reactHost: ReactHost
-    get() = ExpoReactHostFactory.getDefaultReactHost(this, reactNativeHost.packages)
+    get() = ExpoReactHostFactory.getDefaultReactHost(
+      this,
+      PackageList(this).packages.apply {
+        add(StarFocusPackage())
+      }
+    )
 
   override fun onCreate() {
     super.onCreate()
