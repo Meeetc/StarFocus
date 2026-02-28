@@ -15,27 +15,53 @@ import { Colors, Typography, Spacing, BorderRadius } from '../theme';
 import GlassCard from '../components/GlassCard';
 import { getAllBadgesWithStatus } from '../services/badges';
 import { supabase } from '../lib/supabase';
+import { getProfileStats, getStreakData } from '../services/sessionStorage';
 
 export default function ProfileScreen() {
     const [leaderboardOptIn, setLeaderboardOptIn] = useState(true);
     const [user, setUser] = useState(null);
     const [signingOut, setSigningOut] = useState(false);
-
-    // Demo stats (kept as placeholders — real data needs usage tracking)
-    const stats = {
-        currentStreak: 4,
-        longestStreak: 12,
-        freezeTokens: 1,
-        totalSprints: 47,
-        totalFocusHours: 38,
-        earnedBadges: ['streak_master'],
-    };
+    const [stats, setStats] = useState({
+        currentStreak: 0,
+        longestStreak: 0,
+        freezeTokens: 0,
+        totalSprints: 0,
+        totalFocusHours: 0,
+        earnedBadges: [],
+    });
 
     const badges = getAllBadgesWithStatus(stats.earnedBadges);
 
     useEffect(() => {
         loadUser();
+        loadStats();
     }, []);
+
+    const loadStats = async () => {
+        try {
+            const profileStats = await getProfileStats();
+            const streakData = await getStreakData();
+
+            // Determine earned badges based on real stats
+            const earned = [];
+            if (streakData.currentStreak >= 3) earned.push('streak_starter');
+            if (streakData.currentStreak >= 7) earned.push('streak_master');
+            if (profileStats.totalSprints >= 10) earned.push('sprint_veteran');
+            if (profileStats.totalSprints >= 1) earned.push('first_focus');
+            if (profileStats.totalFocusHours >= 10) earned.push('deep_thinker');
+
+            setStats({
+                currentStreak: streakData.currentStreak,
+                longestStreak: streakData.longestStreak,
+                freezeTokens: streakData.freezeTokens,
+                totalSprints: profileStats.totalSprints,
+                totalFocusHours: profileStats.totalFocusHours,
+                earnedBadges: earned,
+            });
+        } catch (error) {
+            console.error('Failed to load stats:', error);
+        }
+    };
 
     const loadUser = async () => {
         try {

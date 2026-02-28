@@ -14,6 +14,7 @@ import GlassCard from '../components/GlassCard';
 import { calculateFocusScore } from '../services/focusScore';
 import { vibrateDeterrent, vibrateSuccess } from '../native/Vibration';
 import { showOverlay } from '../native/Overlay';
+import { saveSession, getStreakData, saveStreakData } from '../services/sessionStorage';
 
 const DURATION_OPTIONS = [15, 25, 45, 60];
 
@@ -67,20 +68,74 @@ export default function FocusSprintScreen({ route, navigation }) {
         }
     };
 
-    const handleSessionComplete = () => {
+    const handleSessionComplete = async () => {
         setIsRunning(false);
         setIsPaused(false);
         setSessionComplete(true);
         vibrateSuccess(); // Native haptic for completion
 
         const elapsedMinutes = selectedDuration - secondsLeft / 60;
+        const deepWorkMins = Math.max(1, Math.round(elapsedMinutes));
         const result = calculateFocusScore({
-            deepWorkMinutes: Math.round(elapsedMinutes),
+            deepWorkMinutes: deepWorkMins,
             appSwitches,
             impulseOpens,
             linkedTask: task,
         });
         setFocusResult(result);
+
+        // ── Persist the session ──
+        try {
+            const now = new Date();
+            await saveSession({
+                linkedTaskId: task?.id || null,
+                startTime: new Date(now.getTime() - deepWorkMins * 60000).toISOString(),
+                endTime: now.toISOString(),
+                deepWorkMinutes: deepWorkMins,
+                appSwitches,
+                impulseOpens,
+                rawScore: result.rawScore,
+                multipliers: result.multipliers,
+                adjustedScore: result.adjustedScore,
+            });
+
+            // ── Update streak ──
+            const streak = await getStreakData();
+            const todayStr = now.toISOString().split('T')[0];
+
+            if (streak.lastFocusDate === todayStr) {
+                // Already focused today, no streak change
+            } else {
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+                if (streak.lastFocusDate === yesterdayStr) {
+                    // Consecutive day — extend streak
+                    streak.currentStreak += 1;
+                } else if (streak.lastFocusDate) {
+                    // Missed a day — reset streak
+                    streak.currentStreak = 1;
+                } else {
+                    // First ever session
+                    streak.currentStreak = 1;
+                }
+
+                if (streak.currentStreak > streak.longestStreak) {
+                    streak.longestStreak = streak.currentStreak;
+                }
+
+                // Award freeze token at 7-day milestones
+                if (streak.currentStreak > 0 && streak.currentStreak % 7 === 0) {
+                    streak.freezeTokens = (streak.freezeTokens || 0) + 1;
+                }
+
+                streak.lastFocusDate = todayStr;
+                await saveStreakData(streak);
+            }
+        } catch (error) {
+            console.error('Failed to save session:', error);
+        }
     };
 
     // Simulate app switch detection (native module tracks this in production)

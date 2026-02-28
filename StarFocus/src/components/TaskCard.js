@@ -1,6 +1,6 @@
 // TaskCard — Priority-aware task card with calm, minimal design
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Colors, Typography, Spacing, BorderRadius, Shadows } from '../theme';
 
 const ZONE_CONFIG = {
@@ -9,8 +9,27 @@ const ZONE_CONFIG = {
     green: { accent: Colors.priority.green, bg: Colors.priority.greenBg, label: 'On Track' },
 };
 
-export default function TaskCard({ task, onStartFocus, onPress }) {
+export default function TaskCard({ task, onStartFocus, onPress, onDelete, onUpdateCompletion }) {
     const zone = ZONE_CONFIG[task.priorityZone] || ZONE_CONFIG.green;
+
+    const handleLongPress = () => {
+        if (!onDelete) return;
+        Alert.alert(
+            'Delete Task',
+            `Remove "${task.title}"?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: () => onDelete(task.taskId || task.id) },
+            ]
+        );
+    };
+
+    const handleCompletionTap = () => {
+        if (!onUpdateCompletion) return;
+        const current = task.completionPercent || 0;
+        const next = current >= 100 ? 0 : Math.min(current + 25, 100);
+        onUpdateCompletion(task.taskId || task.id, next);
+    };
 
     const timeLabel = task.timeRemaining != null
         ? task.timeRemaining < 1 ? 'Due now'
@@ -22,6 +41,7 @@ export default function TaskCard({ task, onStartFocus, onPress }) {
         <TouchableOpacity
             style={[styles.card, Shadows.subtle]}
             onPress={onPress}
+            onLongPress={handleLongPress}
             activeOpacity={0.85}
         >
             {/* Priority indicator line */}
@@ -47,9 +67,11 @@ export default function TaskCard({ task, onStartFocus, onPress }) {
                         {timeLabel && (
                             <Text style={[styles.metaText, { color: zone.accent }]}>{timeLabel}</Text>
                         )}
-                        <Text style={styles.metaText}>
-                            {task.completionPercent}% done
-                        </Text>
+                        <TouchableOpacity onPress={handleCompletionTap} activeOpacity={0.7}>
+                            <Text style={[styles.metaText, styles.completionText]}>
+                                {task.completionPercent}% done ✏️
+                            </Text>
+                        </TouchableOpacity>
                     </View>
 
                     {onStartFocus && (
@@ -137,6 +159,9 @@ const styles = StyleSheet.create({
     metaText: {
         ...Typography.caption,
         color: Colors.text.secondary,
+    },
+    completionText: {
+        textDecorationLine: 'underline',
     },
     focusButton: {
         paddingHorizontal: Spacing.md,

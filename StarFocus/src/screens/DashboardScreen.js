@@ -17,7 +17,7 @@ import TaskCard from '../components/TaskCard';
 import WorkloadGauge from '../components/WorkloadGauge';
 import { rankTasks } from '../services/priority';
 import { calculateWorkloadScore } from '../services/workload';
-import { getTasks } from '../services/taskStorage';
+import { getTasks, deleteTask, updateTaskCompletion } from '../services/taskStorage';
 
 const FILTER_TABS = ['All', 'Classroom', 'Manual', '🔴 Critical'];
 
@@ -71,6 +71,16 @@ export default function DashboardScreen({ navigation }) {
 
     const handleStartFocus = (task) => {
         navigation.navigate('Focus', { screen: 'FocusSprintMain', params: { task } });
+    };
+
+    const handleDeleteTask = async (taskId) => {
+        await deleteTask(taskId);
+        await loadTasks();
+    };
+
+    const handleUpdateCompletion = async (taskId, completionPercent) => {
+        await updateTaskCompletion(taskId, completionPercent);
+        await loadTasks();
     };
 
     // Count tasks by zone
@@ -166,6 +176,8 @@ export default function DashboardScreen({ navigation }) {
                         key={task.id}
                         task={task}
                         onStartFocus={handleStartFocus}
+                        onDelete={handleDeleteTask}
+                        onUpdateCompletion={handleUpdateCompletion}
                     />
                 ))}
 
