@@ -1,4 +1,4 @@
-package com.starfocus.modules
+package com.starfocus.app.app.modules
 
 import android.content.Context
 import android.graphics.Color

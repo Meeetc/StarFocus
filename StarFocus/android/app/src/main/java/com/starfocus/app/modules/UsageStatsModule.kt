@@ -1,4 +1,4 @@
-package com.starfocus.modules
+package com.starfocus.app.app.modules
 
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
@@ -30,7 +30,7 @@ class UsageStatsModule(private val reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun setSprintActive(active: Boolean) {
-        com.starfocus.services.StarFocusAccessibilityService.isSprintActive = active
+        com.starfocus.app.services.StarFocusAccessibilityService.isSprintActive = active
     }
 
     /**

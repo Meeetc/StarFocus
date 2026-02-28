@@ -1,4 +1,4 @@
-package com.starfocus.modules
+package com.starfocus.app.app.modules
 
 import android.os.Build
 import android.os.VibrationEffect

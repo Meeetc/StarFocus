@@ -1,4 +1,4 @@
-package com.starfocus
+package com.starfocus.app.app
 
 import android.app.Application
 import android.content.res.Configuration
@@ -11,7 +11,7 @@ import com.facebook.react.ReactHost
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
 import com.facebook.react.defaults.DefaultReactNativeHost
 
-import com.starfocus.modules.StarFocusPackage
+import com.starfocus.app.app.modules.StarFocusPackage
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ExpoReactHostFactory
