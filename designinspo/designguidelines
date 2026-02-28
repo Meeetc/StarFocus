@@ -1,0 +1,305 @@
+MOBILE APP DESIGN GUIDELINES
+Project: Student Focus & Productivity App
+Audience: College Students
+Design Style: Modern • Minimal • Glassmorphism • High Clarity
+
+⸻
+
+1. DESIGN PRINCIPLES
+
+Clarity over decoration
+Every screen should communicate purpose instantly.
+
+Focus-driven interface
+Remove visual noise. Highlight what needs attention now.
+
+Calm but motivating
+Interface should feel peaceful, not overwhelming.
+
+Fast comprehension
+Users should understand the screen within 2 seconds.
+
+Reward progress visually
+Celebrate streaks, focus sessions, and improvements.
+
+⸻
+
+2. VISUAL STYLE
+
+Primary Aesthetic
+
+Modern glassmorphism + soft depth
+
+Inspired by:
+• frosted glass panels
+• soft gradients
+• floating UI cards
+• subtle glow highlights
+
+Use:
+	•	translucent cards
+	•	blurred backgrounds
+	•	soft shadows
+	•	layered depth
+
+Avoid:
+	•	heavy borders
+	•	sharp contrasts
+	•	cluttered layouts
+
+⸻
+
+3. COLOR SYSTEM
+
+Base Theme
+
+Dark mode default (students use apps at night)
+
+Background:
+Deep charcoal / midnight blue gradient
+
+Examples:
+#0B0F14
+#111827
+#0F172A
+
+⸻
+
+Accent Colors (Use sparingly)
+
+Focus Green → productivity & progress
+#22C55E
+
+Urgency Orange → approaching deadlines
+#F97316
+
+Alert Red → immediate action
+#EF4444
+
+Focus Blue → calm interaction
+#3B82F6
+
+⸻
+
+Card Surface
+
+Use translucent glass surfaces:
+
+rgba(255,255,255,0.06)
+blur: 20–30px
+border: rgba(255,255,255,0.08)
+
+⸻
+
+4. TYPOGRAPHY
+
+Font Style
+
+Clean sans-serif.
+
+Recommended:
+	•	Inter
+	•	SF Pro
+	•	Poppins
+
+⸻
+
+Hierarchy
+
+Headline (Screen titles)
+24–28 px
+Bold
+
+Section Headers
+16–18 px
+Semibold
+
+Primary Content
+14–16 px
+Medium
+
+Secondary text
+12–13 px
+Regular
+
+Use high contrast for readability.
+
+⸻
+
+5. LAYOUT SYSTEM
+
+Spacing
+
+Use generous spacing for clarity.
+
+8px grid system:
+8 / 16 / 24 / 32 spacing increments
+
+⸻
+
+Card Design
+
+Cards should:
+	•	float above background
+	•	have rounded corners (16–20px)
+	•	include soft shadow depth
+
+Shadow:
+0 10px 30px rgba(0,0,0,0.25)
+
+⸻
+
+6. NAVIGATION
+
+Bottom Navigation (Primary)
+
+Use 3–5 icons max:
+
+Home
+Focus
+Leaderboard
+Groups
+Profile
+
+Icons should be:
+simple line icons
+filled when active
+
+⸻
+
+Secondary Navigation
+
+Use top bar for:
+	•	search
+	•	settings
+	•	back navigation
+
+⸻
+
+7. MICRO-INTERACTIONS & MOTION
+
+Motion should feel smooth and purposeful.
+
+Use animations for:
+• focus session start
+• streak achievement
+• leaderboard movement
+• progress increases
+
+Duration:
+200–350ms
+
+Use spring easing for natural feel.
+
+Avoid flashy animations.
+
+⸻
+
+8. PROGRESS & MOTIVATION VISUALS
+
+Progress Charts
+
+Strava-style progress graphs:
+	•	simple lines
+	•	soft glow highlight
+	•	weekly trend clarity
+
+Streak Visualization
+
+Use:
+🔥 flame icon
+or glowing streak counter
+
+Focus Score Animation
+
+Count-up animation increases engagement.
+
+⸻
+
+9. FOCUS MODE UI
+
+When focus session starts:
+
+• darken background slightly
+• reduce visual distractions
+• show minimal timer & task
+• calming gradient glow
+
+UI should feel like entering a “quiet zone”.
+
+⸻
+
+10. INTERVENTION DESIGN
+
+Prompts should feel helpful, not aggressive.
+
+Use:
+soft overlays
+blur background
+gentle motion
+
+Avoid:
+harsh popups
+bright flashing alerts
+
+⸻
+
+11. ICONOGRAPHY
+
+Use clean outline icons.
+
+Recommended libraries:
+Feather Icons
+Material Symbols
+Lucide
+
+Keep stroke consistent.
+
+⸻
+
+12. ACCESSIBILITY
+
+Minimum contrast ratio: 4.5:1
+Text must be readable outdoors.
+Tap targets ≥ 44px.
+
+⸻
+
+13. PERFORMANCE DESIGN
+
+Avoid heavy gradients and large shadows on lists.
+Use lightweight blur and optimize images.
+
+Smoothness is more important than visual complexity.
+
+⸻
+
+14. MOOD & EMOTIONAL FEEL
+
+The app should feel:
+
+calm
+motivating
+modern
+smart
+non-judgmental
+
+Users should feel guided, not controlled.
+
+⸻
+
+15. DESIGN CHECKLIST
+
+Before finalizing a screen:
+
+✔ Is the most important info immediately visible?
+✔ Is there enough breathing space?
+✔ Does the interface feel calm?
+✔ Are progress elements motivating?
+✔ Is the screen understandable in < 2 seconds?
+
+⸻
+
+DESIGN GOAL
+
+Create an interface that makes focus feel natural, progress visible, and discipline rewarding.
